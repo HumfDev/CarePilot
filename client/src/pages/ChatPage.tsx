@@ -9,7 +9,7 @@ export function ChatPage() {
           <span className="text-sm font-medium text-white">CarePilot Healthcare Assistant</span>
         </div>
         <span className="text-[10px] font-medium uppercase tracking-widest text-neutral-500">
-          Genie · Unity Catalog
+          Genie · Lakebase · Unity Catalog
         </span>
       </header>
 
