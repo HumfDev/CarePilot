@@ -65,6 +65,19 @@ targets:
       sql_warehouse_id: b2bb07abff382b79
       serving_endpoint_name: databricks-llama-4-maverick
 
+  # Workspace dbc-7bc68df0-b635 (7474654406105854).
+  # Git-backed app: HumfDev/CarePilot main
+  # Set profile: export DATABRICKS_CONFIG_PROFILE=dbc-7bc68df0-b635
+  # Deploy:       npm run deploy:dbc-7bc68df0-b635
+  dbc-7bc68df0-b635:
+    variables:
+      postgres_branch: projects/carepilot-db/branches/production
+      postgres_database: projects/carepilot-db/branches/production/databases/databricks-postgres
+      genie_space_id: 01f169de0ead1dc988fc22b0532b22a6
+      genie_space_name: CarePilot Healthcare Data
+      sql_warehouse_id: 408db4b626251ac3
+      serving_endpoint_name: databricks-llama-4-maverick
+
   # Hackathon / carepliots workspace (736467640869366).
   # Set profile: export DATABRICKS_CONFIG_PROFILE=hackathon
   # Discover vars: npm run discover:hackathon
