@@ -1,14 +1,10 @@
-import { createApp, server, lakebase, genie } from '@databricks/appkit';
-import { setupChatRoutes } from './routes/chat-routes';
-import { setupChatPersistenceRoutes } from './routes/chat-persistence-routes';
-import { setupChatTables } from './lib/chat-store';
+import { createApp, server, genie } from '@databricks/appkit';
 
 const GENIE_HEALTHCARE_SPACE_ID =
   process.env.DATABRICKS_GENIE_SPACE_ID ?? '01f16954e5791df78bb099133a0041be';
 
 createApp({
   plugins: [
-    lakebase(),
     server(),
     genie({
       spaces: {
@@ -16,9 +12,4 @@ createApp({
       },
     }),
   ],
-  async onPluginsReady(appkit) {
-    await setupChatTables(appkit);
-    setupChatRoutes(appkit);
-    setupChatPersistenceRoutes(appkit);
-  },
 }).catch(console.error);
