@@ -17,11 +17,11 @@ export function ChatPage() {
 
       <main className="min-h-0 flex-1 bg-black">
         <PanelGroup direction="horizontal" className="h-full w-full">
-          <Panel defaultSize={55} minSize={30}>
+          <Panel defaultSize={72} minSize={40}>
             <IndiaMapPanel />
           </Panel>
           <PanelResizeHandle className="w-1 bg-neutral-800 transition-colors hover:bg-neutral-600" />
-          <Panel defaultSize={45} minSize={30}>
+          <Panel defaultSize={28} minSize={20}>
             <GeniePanel />
           </Panel>
         </PanelGroup>

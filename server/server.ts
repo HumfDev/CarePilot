@@ -16,7 +16,9 @@ createApp({
     }),
   ],
   async onPluginsReady(appkit) {
-    await setupHealthcareLakebase(appkit);
+    setupHealthcareLakebase(appkit).catch((err: unknown) => {
+      console.warn('[carepilot] Lakebase setup skipped (non-fatal):', err instanceof Error ? err.message : err);
+    });
     setupMapRoutes(appkit);
   },
 }).catch(console.error);
