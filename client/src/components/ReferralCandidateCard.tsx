@@ -53,17 +53,17 @@ function fmtScore(value: number | null | undefined, digits = 1): string {
 
 function uncertaintyChip(level: string | null | undefined) {
   const text = (level ?? '').toLowerCase();
-  if (text.startsWith('low')) return 'bg-emerald-500/15 text-emerald-300 ring-emerald-500/30';
-  if (text.startsWith('medium')) return 'bg-amber-500/15 text-amber-300 ring-amber-500/30';
-  if (text.startsWith('high')) return 'bg-rose-500/15 text-rose-300 ring-rose-500/30';
-  return 'bg-neutral-800 text-neutral-300 ring-neutral-700';
+  if (text.startsWith('low')) return 'bg-emerald-50 text-emerald-700 ring-emerald-200';
+  if (text.startsWith('medium')) return 'bg-amber-50 text-amber-700 ring-amber-200';
+  if (text.startsWith('high')) return 'bg-rose-50 text-rose-700 ring-rose-200';
+  return 'bg-neutral-100 text-neutral-700 ring-neutral-200';
 }
 
 function ScoreCell({ label, value, accent }: { label: string; value: string; accent?: string }) {
   return (
     <div className="flex flex-col gap-0.5">
       <span className="text-[10px] font-medium uppercase tracking-wide text-neutral-500">{label}</span>
-      <span className={`text-base font-semibold ${accent ?? 'text-white'}`}>{value}</span>
+      <span className={`text-base font-semibold ${accent ?? 'text-neutral-900'}`}>{value}</span>
     </div>
   );
 }
@@ -129,9 +129,9 @@ function CandidateAiSummary({
   }, [load]);
 
   return (
-    <section className="rounded-lg border border-indigo-500/30 bg-indigo-500/5 px-4 py-3">
+    <section className="rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3">
       <div className="mb-2 flex items-center justify-between gap-2">
-        <h3 className="text-[10px] font-semibold uppercase tracking-wide text-indigo-300">
+        <h3 className="text-[10px] font-semibold uppercase tracking-wide text-indigo-700">
           AI card summary · {DEFAULT_LLM_MODEL}
         </h3>
         <button
@@ -140,17 +140,17 @@ function CandidateAiSummary({
           onClick={() => {
             void load(true);
           }}
-          className="rounded-md border border-indigo-500/40 px-2 py-0.5 text-[10px] text-indigo-200 hover:bg-indigo-500/15 disabled:opacity-40"
+          className="rounded-md border border-indigo-200 px-2 py-0.5 text-[10px] text-indigo-700 hover:bg-indigo-100 disabled:opacity-40"
         >
           Regenerate
         </button>
       </div>
       {loading ? (
-        <p className="animate-pulse text-xs text-indigo-200/80">Calling Llama…</p>
+        <p className="animate-pulse text-xs text-indigo-600">Calling Llama…</p>
       ) : error ? (
-        <p className="text-xs text-rose-300">{error}</p>
+        <p className="text-xs text-rose-600">{error}</p>
       ) : summary ? (
-        <p className="whitespace-pre-line text-xs leading-relaxed text-neutral-100">{summary}</p>
+        <p className="whitespace-pre-line text-xs leading-relaxed text-neutral-700">{summary}</p>
       ) : (
         <p className="text-xs text-neutral-500">No AI summary yet.</p>
       )}
@@ -267,14 +267,14 @@ function ReferralCandidateCardInner({
         ref={cardRef}
         role="dialog"
         aria-modal="false"
-        className={`fixed z-[2001] flex max-h-[90vh] w-[min(48rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-950 text-white shadow-2xl ring-1 ring-white/10 ${
+        className={`fixed z-[2001] flex max-h-[90vh] w-[min(48rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-neutral-200 bg-white text-neutral-900 shadow-2xl ring-1 ring-black/5 ${
           dragging ? 'select-none' : ''
         }`}
         style={pos ? { left: pos.x, top: pos.y } : { left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}
       >
         {/* Header — drag handle */}
         <div
-          className={`flex items-start justify-between gap-4 border-b border-neutral-800 px-6 py-4 ${
+          className={`flex items-start justify-between gap-4 border-b border-neutral-200 px-6 py-4 ${
             dragging ? 'cursor-grabbing' : 'cursor-grab'
           }`}
           onPointerDown={onDragHandlePointerDown}
@@ -284,13 +284,13 @@ function ReferralCandidateCardInner({
               <span className="text-neutral-600" aria-hidden="true">
                 ⠿
               </span>
-              <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-neutral-800 text-[10px] font-semibold text-neutral-200">
+              <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-neutral-100 text-[10px] font-semibold text-neutral-700">
                 {candidate.rank}
               </span>
               <span>Candidate for review</span>
               <span className="normal-case text-neutral-600">· drag to move</span>
             </div>
-            <h2 className="mt-1 truncate text-lg font-semibold text-white">{candidate.facility_name}</h2>
+            <h2 className="mt-1 truncate text-lg font-semibold text-neutral-900">{candidate.facility_name}</h2>
             <p className="text-xs text-neutral-400">
               {candidate.clean_facility_type ?? 'facility'}
               {location ? ` · ${location}` : ''}
@@ -300,7 +300,7 @@ function ReferralCandidateCardInner({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md border border-neutral-700 px-2 py-1 text-xs text-neutral-300 hover:bg-neutral-800"
+            className="rounded-md border border-neutral-200 px-2 py-1 text-xs text-neutral-600 hover:bg-neutral-50"
             aria-label="Close candidate card"
           >
             Close
@@ -314,13 +314,13 @@ function ReferralCandidateCardInner({
           {/* Scores */}
           <section>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-              <ScoreCell label="Final score" value={fmtScore(finalScore)} accent="text-indigo-300" />
+              <ScoreCell label="Final score" value={fmtScore(finalScore)} accent="text-indigo-600" />
               {showRaw ? <ScoreCell label="Raw score" value={fmtScore(rawScore)} /> : null}
               {feedbackDelta !== 0 ? (
                 <ScoreCell
                   label="Feedback delta"
                   value={`${feedbackDelta > 0 ? '+' : ''}${fmtScore(feedbackDelta)}`}
-                  accent={feedbackDelta > 0 ? 'text-emerald-300' : 'text-rose-300'}
+                  accent={feedbackDelta > 0 ? 'text-emerald-700' : 'text-rose-700'}
                 />
               ) : null}
               <ScoreCell label="Evidence" value={fmtScore(candidate.evidence_strength_score, 0)} />
@@ -334,12 +334,12 @@ function ReferralCandidateCardInner({
                 {candidate.uncertainty_level ?? 'Uncertainty n/a'}
               </span>
               {candidate.score_cap_reason ? (
-                <span className="rounded-md bg-neutral-800 px-2 py-0.5 text-[11px] text-neutral-300">
+                <span className="rounded-md bg-neutral-100 px-2 py-0.5 text-[11px] text-neutral-700">
                   cap: {candidate.score_cap_reason}
                 </span>
               ) : null}
               {candidate.feedback_reason ? (
-                <span className="rounded-md bg-indigo-500/15 px-2 py-0.5 text-[11px] text-indigo-300">
+                <span className="rounded-md bg-indigo-50 px-2 py-0.5 text-[11px] text-indigo-700">
                   feedback: {candidate.feedback_reason}
                 </span>
               ) : null}
@@ -352,7 +352,7 @@ function ReferralCandidateCardInner({
               <h3 className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-400">
                 Recommendation reason
               </h3>
-              <p className="whitespace-pre-line rounded-md border border-neutral-800 bg-neutral-900/70 px-3 py-2 text-xs leading-relaxed text-neutral-200">
+              <p className="whitespace-pre-line rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs leading-relaxed text-neutral-700">
                 {candidate.recommendation_reason}
               </p>
             </section>
@@ -368,12 +368,12 @@ function ReferralCandidateCardInner({
                 {evidenceSnippets.slice(0, 3).map((snippet) => (
                   <li
                     key={`${snippet.field ?? 'field'}|${(snippet.matched_terms ?? []).join(',')}|${(snippet.text ?? '').slice(0, 40)}`}
-                    className="rounded-md border border-neutral-800 bg-neutral-900/70 px-3 py-2 text-xs"
+                    className="rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs"
                   >
                     <div className="mb-1 flex flex-wrap items-center gap-1 text-[10px] uppercase tracking-wide text-neutral-500">
                       {snippet.field ? <span>{snippet.field}</span> : null}
                       {snippet.tier ? (
-                        <span className="rounded bg-neutral-800 px-1 text-neutral-300">{snippet.tier}</span>
+                        <span className="rounded bg-neutral-100 px-1 text-neutral-700">{snippet.tier}</span>
                       ) : null}
                       {snippet.confidence ? <span>· {snippet.confidence}</span> : null}
                       {snippet.matched_terms?.length ? (
@@ -385,7 +385,7 @@ function ReferralCandidateCardInner({
                 ))}
               </ul>
             ) : (
-              <p className="rounded-md border border-dashed border-neutral-800 px-3 py-2 text-xs text-neutral-500">
+              <p className="rounded-md border border-dashed border-neutral-200 px-3 py-2 text-xs text-neutral-500">
                 No direct evidence snippets — verify before referral.
               </p>
             )}
@@ -425,10 +425,10 @@ function ReferralCandidateCardInner({
                   return (
                     <li
                       key={`${label}|${entry.contribution ?? idx}`}
-                      className="rounded-md bg-neutral-900/70 px-2 py-1"
+                      className="rounded-md bg-neutral-50 px-2 py-1"
                     >
                       <span className="text-neutral-500">{label}</span>
-                      <span className="ml-2 font-medium text-white">{fmtScore(entry.contribution, 2)}</span>
+                      <span className="ml-2 font-medium text-neutral-900">{fmtScore(entry.contribution, 2)}</span>
                     </li>
                   );
                 })}
@@ -437,7 +437,7 @@ function ReferralCandidateCardInner({
           ) : null}
 
           {/* Actions */}
-          <section className="space-y-3 rounded-lg border border-neutral-800 bg-neutral-900/40 px-4 py-3">
+          <section className="space-y-3 rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-3">
             <h3 className="text-[10px] font-semibold uppercase tracking-wide text-neutral-400">Planner actions</h3>
             <div className="flex flex-wrap gap-2">
               <button
@@ -446,7 +446,7 @@ function ReferralCandidateCardInner({
                   void onShortlist(candidate);
                 }}
                 disabled={!!actionPending}
-                className="rounded-md bg-emerald-500/15 px-3 py-1 text-xs font-medium text-emerald-300 ring-1 ring-inset ring-emerald-500/30 hover:bg-emerald-500/25 disabled:opacity-50"
+                className="rounded-md bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-200 hover:bg-emerald-100 disabled:opacity-50"
               >
                 Save to shortlist
               </button>
@@ -456,7 +456,7 @@ function ReferralCandidateCardInner({
                   void onReview(candidate, 'accepted');
                 }}
                 disabled={!!actionPending}
-                className="rounded-md bg-indigo-500/15 px-3 py-1 text-xs font-medium text-indigo-300 ring-1 ring-inset ring-indigo-500/30 hover:bg-indigo-500/25 disabled:opacity-50"
+                className="rounded-md bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700 ring-1 ring-inset ring-indigo-200 hover:bg-indigo-100 disabled:opacity-50"
               >
                 Mark accepted
               </button>
@@ -466,7 +466,7 @@ function ReferralCandidateCardInner({
                   void onReview(candidate, 'needs_verification');
                 }}
                 disabled={!!actionPending}
-                className="rounded-md bg-amber-500/15 px-3 py-1 text-xs font-medium text-amber-300 ring-1 ring-inset ring-amber-500/30 hover:bg-amber-500/25 disabled:opacity-50"
+                className="rounded-md bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-200 hover:bg-amber-100 disabled:opacity-50"
               >
                 Needs verification
               </button>
@@ -476,7 +476,7 @@ function ReferralCandidateCardInner({
                   void onReview(candidate, 'rejected');
                 }}
                 disabled={!!actionPending}
-                className="rounded-md bg-rose-500/15 px-3 py-1 text-xs font-medium text-rose-300 ring-1 ring-inset ring-rose-500/30 hover:bg-rose-500/25 disabled:opacity-50"
+                className="rounded-md bg-rose-50 px-3 py-1 text-xs font-medium text-rose-700 ring-1 ring-inset ring-rose-200 hover:bg-rose-100 disabled:opacity-50"
               >
                 Reject
               </button>
@@ -491,7 +491,7 @@ function ReferralCandidateCardInner({
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   placeholder="e.g. Confirmed dialysis chairs by phone"
-                  className="flex-1 rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-white placeholder:text-neutral-600 focus:border-indigo-400 focus:outline-none"
+                  className="flex-1 rounded-md border border-neutral-200 bg-white px-2 py-1 text-xs text-neutral-900 placeholder:text-neutral-400 focus:border-indigo-400 focus:outline-none"
                 />
                 <button
                   type="button"
@@ -501,7 +501,7 @@ function ReferralCandidateCardInner({
                     if (!text) return;
                     void Promise.resolve(onSaveNote(candidate, text)).then(() => setNote(''));
                   }}
-                  className="rounded-md border border-neutral-700 px-3 py-1 text-xs font-medium text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
+                  className="rounded-md border border-neutral-200 px-3 py-1 text-xs font-medium text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
                 >
                   Save note
                 </button>
@@ -520,14 +520,14 @@ function ReferralCandidateCardInner({
                   value={overrideScore}
                   onChange={(e) => setOverrideScore(e.target.value)}
                   placeholder="0–100"
-                  className="w-24 rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-white focus:border-indigo-400 focus:outline-none"
+                  className="w-24 rounded-md border border-neutral-200 bg-white px-2 py-1 text-xs text-neutral-900 focus:border-indigo-400 focus:outline-none"
                 />
                 <input
                   type="text"
                   value={overrideReason}
                   onChange={(e) => setOverrideReason(e.target.value)}
                   placeholder="Reason (e.g. phone-verified)"
-                  className="flex-1 rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-white placeholder:text-neutral-600 focus:border-indigo-400 focus:outline-none"
+                  className="flex-1 rounded-md border border-neutral-200 bg-white px-2 py-1 text-xs text-neutral-900 placeholder:text-neutral-400 focus:border-indigo-400 focus:outline-none"
                 />
                 <button
                   type="button"
@@ -540,7 +540,7 @@ function ReferralCandidateCardInner({
                       setOverrideReason('');
                     });
                   }}
-                  className="rounded-md border border-neutral-700 px-3 py-1 text-xs font-medium text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
+                  className="rounded-md border border-neutral-200 px-3 py-1 text-xs font-medium text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
                 >
                   Save override
                 </button>
@@ -550,7 +550,7 @@ function ReferralCandidateCardInner({
         </div>
 
         {/* Footer */}
-        <div className="border-t border-neutral-800 bg-neutral-950 px-6 py-3 text-[11px] text-neutral-400">
+        <div className="border-t border-neutral-200 bg-neutral-50 px-6 py-3 text-[11px] text-neutral-500">
           Verification step: confirm the matched evidence with a phone call or the official website before referring a
           patient. <span className="text-neutral-500">Not medical advice — planner-facing referral copilot only.</span>
         </div>
@@ -571,15 +571,15 @@ function UrlBucket({
   hint?: string;
 }) {
   const palette = {
-    emerald: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300',
-    indigo: 'border-indigo-500/30 bg-indigo-500/10 text-indigo-300',
-    rose: 'border-rose-500/30 bg-rose-500/10 text-rose-300',
+    emerald: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+    indigo: 'border-indigo-200 bg-indigo-50 text-indigo-700',
+    rose: 'border-rose-200 bg-rose-50 text-rose-700',
   }[tone];
   return (
     <div className={`rounded-md border ${palette} px-3 py-2 text-[11px]`}>
       <div className="flex items-baseline justify-between">
         <span className="text-[10px] font-semibold uppercase tracking-wide opacity-80">{label}</span>
-        <span className="font-semibold text-white">{urls.length}</span>
+        <span className="font-semibold text-neutral-900">{urls.length}</span>
       </div>
       {hint ? <div className="mt-0.5 text-[10px] opacity-80">{hint}</div> : null}
       {urls.slice(0, 2).map((url) => (
@@ -588,7 +588,7 @@ function UrlBucket({
           href={url}
           target="_blank"
           rel="noreferrer"
-          className="mt-1 block truncate text-[10px] text-white/80 hover:underline"
+          className="mt-1 block truncate text-[10px] text-neutral-700 hover:underline"
         >
           {url}
         </a>
@@ -600,13 +600,13 @@ function UrlBucket({
 
 function FlagsBlock({ title, flags, tone }: { title: string; flags: string[]; tone: 'amber' | 'rose' }) {
   const palette = {
-    amber: 'border-amber-500/30 bg-amber-500/10 text-amber-200',
-    rose: 'border-rose-500/30 bg-rose-500/10 text-rose-200',
+    amber: 'border-amber-200 bg-amber-50 text-amber-800',
+    rose: 'border-rose-200 bg-rose-50 text-rose-700',
   }[tone];
   return (
     <div className={`rounded-md border ${palette} px-3 py-2 text-[11px]`}>
       <div className="text-[10px] font-semibold uppercase tracking-wide opacity-80">{title}</div>
-      <ul className="mt-1 list-disc space-y-0.5 pl-4 text-white/85">
+      <ul className="mt-1 list-disc space-y-0.5 pl-4 text-neutral-700">
         {flags.map((flag) => (
           <li key={flag}>{flag}</li>
         ))}

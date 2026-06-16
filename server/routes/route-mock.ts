@@ -1,29 +1,22 @@
 /**
- * Mock routing ETA endpoint.
+ * Route ETA endpoint for the referral map.
  *
- * Strictly for demo / planner-facing prototyping. There is NO live traffic
- * source. We compute a haversine distance, assume a 25 km/h urban speed,
- * and then apply a deterministic pseudo-random "traffic multiplier" derived
- * from the facility_id + origin + destination triple so the same query
- * always returns the same ETA within a session.
+ * Default engine: **OSRM** (OpenStreetMap road network) with fallback to the
+ * legacy haversine mock when OSRM is unavailable. Set `ROUTE_ENGINE=mock` to
+ * force the demo-only straight-line estimator.
  *
- * Contract: see the user-facing card disclaimer below — never describe these
- * numbers as "live traffic" anywhere in the UI.
- *
- * Cache: in-process Map keyed by `facility_id|origin|destination` (lat/lon
- * quantised to 4 decimals). Single Node process is fine for the demo; for a
- * multi-replica deployment we would swap this for Lakebase or Redis.
+ * OSRM durations follow default road speeds — **not** live traffic.
  */
 import type { Application, Request, Response } from 'express';
+import { fetchOsrmDrivingRoute, routeEngineMode, type LatLon } from '../lib/osrm-client';
 
 interface AppKitLike {
   server: { extend(fn: (app: Application) => void): void };
 }
 
-type LatLon = [number, number];
 type TrafficLevel = 'Light' | 'Moderate' | 'Heavy';
 
-interface MockRouteResponse {
+interface RouteResponse {
   facility_id: string;
   facility_name: string;
   distance_km: number;
@@ -32,17 +25,19 @@ interface MockRouteResponse {
   traffic_delay_minutes: number;
   traffic_level: TrafficLevel;
   traffic_multiplier: number;
-  is_mock: true;
+  is_mock: boolean;
+  route_engine: 'mock' | 'osrm';
   disclaimer: string;
   route_polyline: LatLon[];
-  /** Source of the polyline so the UI can label it appropriately. */
-  polyline_source: 'straight_line' | 'dijkstra_provided';
+  polyline_source: 'straight_line' | 'osrm' | 'dijkstra_provided';
 }
 
 const URBAN_SPEED_KMH = 25;
-const DISCLAIMER = 'Simulated ETA for demo purposes only; not live traffic.';
+const MOCK_DISCLAIMER = 'Simulated ETA for demo purposes only; not live traffic.';
+const OSRM_DISCLAIMER =
+  'ETA from OpenStreetMap road network via OSRM; not live traffic — verify before travel.';
 const MAX_CACHE_ENTRIES = 256;
-const sessionCache = new Map<string, MockRouteResponse>();
+const sessionCache = new Map<string, RouteResponse>();
 
 function asNumber(value: unknown): number | null {
   if (value == null) return null;
@@ -59,10 +54,6 @@ function haversineKm(aLat: number, aLon: number, bLat: number, bLon: number): nu
   return 2 * R * Math.asin(Math.min(1, Math.sqrt(s)));
 }
 
-/**
- * Stable, well-distributed 32-bit hash. FNV-1a is plenty for seeding our
- * single-shot PRNG and avoids pulling in a crypto dependency.
- */
 function fnv1aHash(input: string): number {
   let h = 0x811c9dc5;
   for (let i = 0; i < input.length; i++) {
@@ -72,7 +63,6 @@ function fnv1aHash(input: string): number {
   return h >>> 0;
 }
 
-/** Single sample of mulberry32 — returns a float in [0, 1). */
 function seededUnit(seed: number): number {
   let t = (seed + 0x6d2b79f5) >>> 0;
   t = Math.imul(t ^ (t >>> 15), t | 1);
@@ -91,8 +81,8 @@ function quant(lat: number, lon: number): string {
   return `${lat.toFixed(4)},${lon.toFixed(4)}`;
 }
 
-function cacheKey(facility_id: string, origin: LatLon, destination: LatLon): string {
-  return `${facility_id}|${quant(origin[0], origin[1])}|${quant(destination[0], destination[1])}`;
+function cacheKey(facility_id: string, origin: LatLon, destination: LatLon, engine: string): string {
+  return `${engine}|${facility_id}|${quant(origin[0], origin[1])}|${quant(destination[0], destination[1])}`;
 }
 
 function parsePolyline(value: unknown): LatLon[] | null {
@@ -113,9 +103,70 @@ function evictOldestIfFull() {
   if (firstKey !== undefined) sessionCache.delete(firstKey);
 }
 
+function buildMockRoute(
+  facility_id: string,
+  facility_name: string,
+  o: LatLon,
+  d: LatLon,
+  key: string,
+  overridePolyline: LatLon[] | null,
+): RouteResponse {
+  const distance_km = haversineKm(o[0], o[1], d[0], d[1]);
+  const base_eta_minutes = (distance_km / URBAN_SPEED_KMH) * 60;
+  const seed = fnv1aHash(key);
+  const traffic_multiplier = 1.0 + seededUnit(seed) * 0.8;
+  const eta_minutes = base_eta_minutes * traffic_multiplier;
+  const traffic_delay_minutes = eta_minutes - base_eta_minutes;
+
+  const polyline: LatLon[] = overridePolyline ?? [o, d];
+  const polyline_source: RouteResponse['polyline_source'] = overridePolyline
+    ? 'dijkstra_provided'
+    : 'straight_line';
+
+  return {
+    facility_id,
+    facility_name,
+    distance_km: Number(distance_km.toFixed(2)),
+    eta_minutes: Number(eta_minutes.toFixed(1)),
+    base_eta_minutes: Number(base_eta_minutes.toFixed(1)),
+    traffic_delay_minutes: Number(traffic_delay_minutes.toFixed(1)),
+    traffic_level: classifyTraffic(traffic_multiplier),
+    traffic_multiplier: Number(traffic_multiplier.toFixed(3)),
+    is_mock: true,
+    route_engine: 'mock',
+    disclaimer: MOCK_DISCLAIMER,
+    route_polyline: polyline,
+    polyline_source,
+  };
+}
+
+function buildOsrmRoute(
+  facility_id: string,
+  facility_name: string,
+  osrm: { distance_km: number; duration_minutes: number; route_polyline: LatLon[] },
+  overridePolyline: LatLon[] | null,
+): RouteResponse {
+  const eta_minutes = osrm.duration_minutes;
+  return {
+    facility_id,
+    facility_name,
+    distance_km: Number(osrm.distance_km.toFixed(2)),
+    eta_minutes: Number(eta_minutes.toFixed(1)),
+    base_eta_minutes: Number(eta_minutes.toFixed(1)),
+    traffic_delay_minutes: 0,
+    traffic_level: 'Light',
+    traffic_multiplier: 1,
+    is_mock: false,
+    route_engine: 'osrm',
+    disclaimer: OSRM_DISCLAIMER,
+    route_polyline: overridePolyline ?? osrm.route_polyline,
+    polyline_source: overridePolyline ? 'dijkstra_provided' : 'osrm',
+  };
+}
+
 export function setupRouteMockRoutes(appkit: AppKitLike) {
   appkit.server.extend((app) => {
-    app.post('/api/route/mock', (req: Request, res: Response) => {
+    app.post('/api/route/mock', async (req: Request, res: Response) => {
       const body = typeof req.body === 'object' && req.body !== null ? (req.body as Record<string, unknown>) : {};
 
       const facility_id = typeof body.facility_id === 'string' ? body.facility_id.trim() : '';
@@ -137,13 +188,9 @@ export function setupRouteMockRoutes(appkit: AppKitLike) {
 
       const o: LatLon = [originLat, originLon];
       const d: LatLon = [destLat, destLon];
-      const key = cacheKey(facility_id, o, d);
-
-      // The client may pass an existing polyline (e.g. from the Dijkstra
-      // routing layer). We honour it as-is so we never accidentally
-      // overwrite a real route with a straight-line draw — but the ETA is
-      // still mock so the disclaimer stays in place.
+      const engineMode = routeEngineMode();
       const overridePolyline = parsePolyline(body.existing_polyline);
+      const key = cacheKey(facility_id, o, d, engineMode);
 
       const cached = sessionCache.get(key);
       if (cached && !overridePolyline) {
@@ -151,36 +198,26 @@ export function setupRouteMockRoutes(appkit: AppKitLike) {
         return;
       }
 
-      const distance_km = haversineKm(originLat, originLon, destLat, destLon);
-      const base_eta_minutes = (distance_km / URBAN_SPEED_KMH) * 60;
-      const seed = fnv1aHash(key);
-      const traffic_multiplier = 1.0 + seededUnit(seed) * 0.8; // [1.00, 1.80)
-      const eta_minutes = base_eta_minutes * traffic_multiplier;
-      const traffic_delay_minutes = eta_minutes - base_eta_minutes;
-      const traffic_level = classifyTraffic(traffic_multiplier);
+      let response: RouteResponse | null = null;
 
-      const polyline: LatLon[] = overridePolyline ?? [o, d];
-      const polyline_source: MockRouteResponse['polyline_source'] = overridePolyline
-        ? 'dijkstra_provided'
-        : 'straight_line';
+      if (engineMode !== 'mock') {
+        const osrm = await fetchOsrmDrivingRoute(o, d);
+        if (osrm) {
+          response = buildOsrmRoute(facility_id, facility_name, osrm, overridePolyline);
+        } else if (engineMode === 'osrm') {
+          res.status(502).json({
+            ok: false,
+            error: 'OSRM routing failed and ROUTE_ENGINE=osrm does not allow mock fallback.',
+          });
+          return;
+        }
+      }
 
-      const response: MockRouteResponse = {
-        facility_id,
-        facility_name,
-        distance_km: Number(distance_km.toFixed(2)),
-        eta_minutes: Number(eta_minutes.toFixed(1)),
-        base_eta_minutes: Number(base_eta_minutes.toFixed(1)),
-        traffic_delay_minutes: Number(traffic_delay_minutes.toFixed(1)),
-        traffic_level,
-        traffic_multiplier: Number(traffic_multiplier.toFixed(3)),
-        is_mock: true,
-        disclaimer: DISCLAIMER,
-        route_polyline: polyline,
-        polyline_source,
-      };
+      if (!response) {
+        const mockKey = cacheKey(facility_id, o, d, 'mock');
+        response = buildMockRoute(facility_id, facility_name, o, d, mockKey, overridePolyline);
+      }
 
-      // Only cache the deterministic (straight-line) variant; a client-supplied
-      // polyline shouldn't pollute the cache for other callers.
       if (!overridePolyline) {
         evictOldestIfFull();
         sessionCache.set(key, response);

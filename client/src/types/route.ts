@@ -1,12 +1,14 @@
 /**
  * Contract returned by `POST /api/route/mock`.
  *
- * This is **not** live traffic data — it is a deterministic mock used for
- * demo purposes only. The `is_mock` flag and `disclaimer` field are
- * required by the UI so the planner can never be misled.
+ * When `route_engine` is `osrm`, distance/ETA/polyline come from the OSRM
+ * road network (OpenStreetMap). When `route_engine` is `mock`, values are a
+ * deterministic straight-line demo. Neither mode is live traffic.
  */
 
 export type TrafficLevel = 'Light' | 'Moderate' | 'Heavy';
+
+export type RoutePolylineSource = 'straight_line' | 'osrm' | 'dijkstra_provided';
 
 export interface MockRoute {
   facility_id: string;
@@ -17,8 +19,9 @@ export interface MockRoute {
   traffic_delay_minutes: number;
   traffic_level: TrafficLevel;
   traffic_multiplier: number;
-  is_mock: true;
+  is_mock: boolean;
+  route_engine: 'mock' | 'osrm';
   disclaimer: string;
   route_polyline: [number, number][];
-  polyline_source: 'straight_line' | 'dijkstra_provided';
+  polyline_source: RoutePolylineSource;
 }

@@ -2,42 +2,42 @@
 @source "../../node_modules/streamdown/dist/*.js";
 
 :root {
-  color-scheme: dark;
-  --background: #000000;
-  --foreground: #ffffff;
-  --card: #1a1a1a;
-  --card-foreground: #ffffff;
-  --popover: #1a1a1a;
-  --popover-foreground: #ffffff;
-  --primary: #ffffff;
-  --primary-foreground: #000000;
-  --secondary: #262626;
-  --secondary-foreground: #ffffff;
-  --muted: #1a1a1a;
-  --muted-foreground: #a3a3a3;
-  --accent: #262626;
-  --accent-foreground: #ffffff;
-  --destructive: #525252;
+  color-scheme: light;
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+  --primary: #4f46e5;
+  --primary-foreground: #ffffff;
+  --secondary: #f1f5f9;
+  --secondary-foreground: #0f172a;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --accent: #f1f5f9;
+  --accent-foreground: #0f172a;
+  --destructive: #ef4444;
   --destructive-foreground: #ffffff;
-  --border: #262626;
-  --input: #262626;
-  --ring: #525252;
-  --sidebar: #0a0a0a;
-  --sidebar-foreground: #ffffff;
-  --sidebar-primary: #ffffff;
-  --sidebar-primary-foreground: #000000;
-  --sidebar-accent: #262626;
-  --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: #262626;
-  --sidebar-ring: #525252;
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: #94a3b8;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #0f172a;
+  --sidebar-primary: #4f46e5;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f1f5f9;
+  --sidebar-accent-foreground: #0f172a;
+  --sidebar-border: #e2e8f0;
+  --sidebar-ring: #94a3b8;
 }
 
 html,
 body,
 #root {
   height: 100%;
-  background-color: #000000;
-  color: #ffffff;
+  background-color: #f8fafc;
+  color: #0f172a;
 }
 
 body {
@@ -45,46 +45,27 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Genie chat dark mode overrides */
-.genie-dark {
-  --background: #0a0a0a;
-  --foreground: #ffffff;
-  --card: #171717;
-  --card-foreground: #ffffff;
-  --muted: #262626;
-  --muted-foreground: #a3a3a3;
-  --border: #262626;
-  --input: #262626;
-  --primary: #ffffff;
-  --primary-foreground: #000000;
-}
-
-.genie-dark [data-slot='genie-chat'] {
-  background-color: #0a0a0a;
-  color: #ffffff;
-}
-
-/* Leaflet dark theme tweaks */
+/* Leaflet light theme tweaks */
 .leaflet-container {
-  background: #0a0a0a;
+  background: #e2e8f0;
   font-family: inherit;
 }
 
 .leaflet-control-attribution {
-  background: rgba(10, 10, 10, 0.85) !important;
-  color: #a3a3a3 !important;
+  background: rgba(255, 255, 255, 0.9) !important;
+  color: #64748b !important;
 }
 
 .leaflet-control-attribution a {
-  color: #007aff !important;
+  color: #4f46e5 !important;
 }
 
 .leaflet-tooltip {
-  background: rgba(23, 23, 23, 0.95);
-  border: 1px solid #404040;
-  color: #ffffff;
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid #cbd5e1;
+  color: #0f172a;
 }
 
 .leaflet-tooltip-top:before {
-  border-top-color: #404040;
+  border-top-color: #cbd5e1;
 }

@@ -1,6 +1,7 @@
 import { createApp, server, lakebase, genie } from '@databricks/appkit';
 import { setupHealthcareLakebase } from './lib/lakebase-setup';
 import { setupMapRoutes } from './routes/map-routes';
+import { setupMapSearchRoutes } from './routes/map-search-routes';
 import { setupReferralRoutes } from './routes/referral-routes';
 import { setupRouteMockRoutes } from './routes/route-mock';
 import { warmupPythonBridge } from './lib/python-bridge';
@@ -44,6 +45,7 @@ createApp({
     }
     setupReferralRoutes(appkit);
     setupRouteMockRoutes(appkit);
+    setupMapSearchRoutes(appkit);
     // Fire-and-forget warmup so the first chat search is fast. Failures are
     // logged but do not block server boot — the bridge will lazily warm on the
     // first real request.

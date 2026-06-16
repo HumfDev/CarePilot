@@ -69,7 +69,7 @@ export function PlannerLocationControl({
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="pointer-events-auto flex items-center gap-2 rounded-lg border border-indigo-500/40 bg-neutral-950/90 px-3 py-2 text-xs font-medium text-indigo-100 shadow-lg backdrop-blur-sm hover:bg-indigo-500/10"
+          className="pointer-events-auto flex items-center gap-2 rounded-lg border border-indigo-200 bg-white/95 px-3 py-2 text-xs font-medium text-indigo-700 shadow-lg backdrop-blur-sm hover:bg-indigo-50"
         >
           <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-indigo-500/20 text-[10px]">
             ◉
@@ -85,10 +85,10 @@ export function PlannerLocationControl({
       key={panelKey}
       className="pointer-events-none absolute bottom-3 left-3 z-[1000] w-[min(20rem,calc(100vw-2rem))]"
     >
-      <div className="pointer-events-auto rounded-lg border border-indigo-500/30 bg-neutral-950/92 px-3 py-3 text-[11px] text-neutral-200 shadow-lg backdrop-blur-sm">
+      <div className="pointer-events-auto rounded-lg border border-indigo-200 bg-white/95 px-3 py-3 text-[11px] text-neutral-700 shadow-lg backdrop-blur-sm">
         <div className="mb-2 flex items-start justify-between gap-2">
           <div>
-            <div className="text-[10px] font-semibold uppercase tracking-wide text-indigo-300">My location</div>
+            <div className="text-[10px] font-semibold uppercase tracking-wide text-indigo-600">My location</div>
             <p className="mt-0.5 text-[10px] leading-snug text-neutral-500">
               Demo only — used as the route origin. Not your device GPS.
             </p>
@@ -99,7 +99,7 @@ export function PlannerLocationControl({
               onPickModeChange(false);
               setOpen(false);
             }}
-            className="rounded-md border border-neutral-700 px-2 py-0.5 text-[10px] text-neutral-400 hover:bg-neutral-800"
+            className="rounded-md border border-neutral-200 px-2 py-0.5 text-[10px] text-neutral-500 hover:bg-neutral-50"
           >
             Close
           </button>
@@ -122,7 +122,7 @@ export function PlannerLocationControl({
                 value={latInput}
                 onChange={(e) => setLatInput(e.target.value)}
                 placeholder="e.g. 26.9124"
-                className="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-xs text-white placeholder:text-neutral-600 focus:border-indigo-400 focus:outline-none"
+                className="rounded-md border border-neutral-200 bg-white px-2 py-1.5 text-xs text-neutral-900 placeholder:text-neutral-400 focus:border-indigo-400 focus:outline-none"
               />
             </label>
             <label className="flex flex-col gap-1">
@@ -132,18 +132,18 @@ export function PlannerLocationControl({
                 value={lonInput}
                 onChange={(e) => setLonInput(e.target.value)}
                 placeholder="e.g. 75.7873"
-                className="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-xs text-white placeholder:text-neutral-600 focus:border-indigo-400 focus:outline-none"
+                className="rounded-md border border-neutral-200 bg-white px-2 py-1.5 text-xs text-neutral-900 placeholder:text-neutral-400 focus:border-indigo-400 focus:outline-none"
               />
             </label>
           </div>
 
-          {inputError ? <p className="text-[10px] text-rose-300">{inputError}</p> : null}
+          {inputError ? <p className="text-[10px] text-rose-600">{inputError}</p> : null}
 
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
               onClick={applyManual}
-              className="rounded-md border border-neutral-700 px-3 py-1.5 text-xs font-medium text-neutral-200 hover:bg-neutral-800"
+              className="rounded-md border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50"
             >
               Apply coordinates
             </button>
@@ -152,8 +152,8 @@ export function PlannerLocationControl({
               onClick={startPickOnMap}
               className={`rounded-md border px-3 py-1.5 text-xs font-medium ${
                 pickMode
-                  ? 'border-indigo-400 bg-indigo-500/15 text-indigo-200'
-                  : 'border-neutral-700 text-neutral-200 hover:bg-neutral-800'
+                  ? 'border-indigo-400 bg-indigo-50 text-indigo-700'
+                  : 'border-neutral-200 text-neutral-700 hover:bg-neutral-50'
               }`}
             >
               {pickMode ? 'Click map…' : 'Pick on map'}
@@ -168,7 +168,7 @@ export function PlannerLocationControl({
                   setLonInput('');
                   setInputError(null);
                 }}
-                className="rounded-md border border-neutral-800 px-3 py-1.5 text-xs text-neutral-500 hover:bg-neutral-900"
+                className="rounded-md border border-neutral-200 px-3 py-1.5 text-xs text-neutral-500 hover:bg-neutral-50"
               >
                 Clear
               </button>
@@ -176,7 +176,7 @@ export function PlannerLocationControl({
           </div>
 
           {pickMode ? (
-            <p className="rounded-md border border-indigo-500/25 bg-indigo-500/10 px-2 py-1.5 text-[10px] text-indigo-200">
+            <p className="rounded-md border border-indigo-200 bg-indigo-50 px-2 py-1.5 text-[10px] text-indigo-700">
               Click anywhere inside India on the map to set your location.
             </p>
           ) : null}

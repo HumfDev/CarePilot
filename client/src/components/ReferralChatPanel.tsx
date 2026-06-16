@@ -9,6 +9,7 @@
  * later as a secondary tab for ad-hoc data queries.
  */
 import { useEffect, useRef, useState } from 'react';
+import { AppBrand } from './AppBrand';
 import type { ChatMessage, UseReferralSearchReturn } from '../hooks/useReferralSearch';
 
 interface ReferralChatPanelProps {
@@ -35,7 +36,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
   }
   return (
     <div className="flex justify-start">
-      <div className="max-w-[85%] rounded-2xl rounded-bl-sm border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 shadow-sm">
+      <div className="max-w-[85%] rounded-2xl rounded-bl-sm border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-800 shadow-sm">
         {message.text}
       </div>
     </div>
@@ -62,12 +63,11 @@ export function ReferralChatPanel({ referral, exampleQueries }: ReferralChatPane
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-black" data-testid="referral-chat-panel">
-      <div className="shrink-0 border-b border-neutral-800 px-4 py-3">
-        <h1 className="text-base font-semibold text-white">Referral Copilot</h1>
-        <p className="mt-0.5 text-xs text-neutral-500">
-          Evidence-aware ranking + <span className="text-indigo-300">Databricks Llama 4 Maverick</span> summaries (not
-          Genie).
+    <div className="flex h-full min-h-0 flex-col bg-white" data-testid="referral-chat-panel">
+      <div className="shrink-0 border-b border-neutral-200 px-4 py-3">
+        <AppBrand variant="compact" />
+        <p className="mt-2 text-xs text-neutral-500">
+          Evidence-aware ranking + <span className="text-indigo-600">Databricks Llama 4 Maverick</span> summaries
         </p>
       </div>
 
@@ -77,26 +77,26 @@ export function ReferralChatPanel({ referral, exampleQueries }: ReferralChatPane
         ))}
         {referral.search.loading && (
           <div className="flex justify-start">
-            <div className="max-w-[60%] animate-pulse rounded-2xl rounded-bl-sm border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-400">
+            <div className="max-w-[60%] animate-pulse rounded-2xl rounded-bl-sm border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm text-neutral-500">
               Scoring candidates…
             </div>
           </div>
         )}
         {referral.search.summarizing && (
           <div className="flex justify-start">
-            <div className="max-w-[60%] animate-pulse rounded-2xl rounded-bl-sm border border-indigo-500/30 bg-indigo-500/10 px-3 py-2 text-sm text-indigo-200">
+            <div className="max-w-[60%] animate-pulse rounded-2xl rounded-bl-sm border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm text-indigo-700">
               Llama 4 Maverick is thinking…
             </div>
           </div>
         )}
         {referral.search.error && (
-          <div className="rounded-md border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">
+          <div className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
             {referral.search.error}
           </div>
         )}
       </div>
 
-      <div className="shrink-0 space-y-2 border-t border-neutral-800 px-4 py-3">
+      <div className="shrink-0 space-y-2 border-t border-neutral-200 px-4 py-3">
         <div className="flex flex-wrap gap-1">
           {examples.map((q) => (
             <button
@@ -106,7 +106,7 @@ export function ReferralChatPanel({ referral, exampleQueries }: ReferralChatPane
               onClick={() => {
                 void referral.submitMessage(q);
               }}
-              className="rounded-full border border-neutral-800 bg-neutral-900 px-2.5 py-0.5 text-[11px] text-neutral-300 hover:bg-neutral-800 disabled:opacity-40"
+              className="rounded-full border border-neutral-200 bg-neutral-50 px-2.5 py-0.5 text-[11px] text-neutral-600 hover:bg-neutral-100 disabled:opacity-40"
             >
               {q}
             </button>
@@ -124,7 +124,7 @@ export function ReferralChatPanel({ referral, exampleQueries }: ReferralChatPane
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             placeholder='Try "dialysis near Jaipur"'
-            className="flex-1 rounded-md border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-indigo-400 focus:outline-none"
+            className="flex-1 rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-indigo-400 focus:outline-none"
             disabled={busy}
           />
           <button
@@ -135,7 +135,7 @@ export function ReferralChatPanel({ referral, exampleQueries }: ReferralChatPane
             Send
           </button>
         </form>
-        <p className="text-[10px] text-neutral-600">
+        <p className="text-[10px] text-neutral-500">
           Not medical advice — verify with a phone call or official website before referral.
         </p>
       </div>

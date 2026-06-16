@@ -8,7 +8,7 @@
  *      "dijkstra_provided"
  *   5. is_mock is true and eta = base_eta + traffic_delay
  *
- * Run with:  npx tsx --tsconfig tsconfig.server.json scripts/smoke-mock-route.ts
+ * Run with:  ROUTE_ENGINE=mock npx tsx --tsconfig tsconfig.server.json scripts/smoke-mock-route.ts
  */
 import express, { type Application } from 'express';
 import http from 'node:http';
@@ -151,7 +151,7 @@ async function main(): Promise<void> {
   }
   console.log('arithmetic OK (eta == base + traffic_delay)');
 
-  if (a.is_mock !== true) fail('is_mock must be true');
+  if (a.is_mock !== true) fail('is_mock must be true for mock engine');
   if (typeof a.disclaimer !== 'string' || !a.disclaimer.toLowerCase().includes('simulated')) {
     fail('disclaimer must mention "simulated"', a);
   }
