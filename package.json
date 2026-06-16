@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "NODE_ENV=production node --env-file-if-exists=./.env ./dist/server.js",
-    "dev": "NODE_ENV=development tsx watch --tsconfig ./tsconfig.server.json --env-file-if-exists=./.env ./server/server.ts",
+    "dev": "cross-env NODE_ENV=development tsx watch --tsconfig ./tsconfig.server.json --env-file-if-exists=./.env ./server/server.ts",
     "build:client": "tsc -b tsconfig.client.json && vite build --config client/vite.config.ts",
     "build:server": "tsdown -c tsdown.server.config.ts",
     "build": "npm run build:server && npm run build:client",
@@ -25,7 +25,14 @@
     "sync:bundle-vars": "node scripts/sync-bundle-vars.mjs",
     "discover:hackathon": "node scripts/discover-hackathon.mjs",
     "deploy": "npm run sync:bundle-vars && databricks bundle deploy && databricks bundle run app",
-    "deploy:hackathon": "npm run build && databricks bundle deploy --target hackathon --profile hackathon && databricks apps deploy carepliots --profile hackathon --auto-approve"
+    "deploy:hackathon": "npm run build && databricks bundle deploy --target hackathon --profile hackathon && databricks apps deploy carepliots --profile hackathon --auto-approve",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:smoke:referral": "tsx --tsconfig tsconfig.test.json scripts/smoke-referral-api.ts",
+    "test:smoke:route": "ROUTE_ENGINE=mock tsx --tsconfig tsconfig.server.json scripts/smoke-mock-route.ts",
+    "test:python:urgency": "cd python_bridge && python3 -m unittest test_urgency_reweighting",
+    "test:e2e": "playwright test",
+    "test:all": "npm run test && npm run test:smoke:referral && npm run test:python:urgency"
   },
   "keywords": [],
   "author": "",
@@ -61,6 +68,7 @@
     "@ast-grep/napi": "0.37.0",
     "@eslint/compat": "2.0.0",
     "@eslint/js": "9.39.1",
+    "@playwright/test": "^1.61.0",
     "@tailwindcss/postcss": "4.1.17",
     "@tailwindcss/vite": "4.1.17",
     "@types/express": "5.0.5",
@@ -72,6 +80,7 @@
     "@typescript-eslint/parser": "8.48.0",
     "@vitejs/plugin-react": "5.0.4",
     "autoprefixer": "10.4.21",
+    "cross-env": "^10.1.0",
     "eslint": "9.39.1",
     "eslint-config-prettier": "10.1.8",
     "eslint-plugin-react": "7.37.5",
@@ -84,7 +93,8 @@
     "tsx": "4.20.6",
     "typescript": "5.9.3",
     "typescript-eslint": "8.48.0",
-    "vite": "npm:rolldown-vite@7.1.14"
+    "vite": "npm:rolldown-vite@7.1.14",
+    "vitest": "^3.2.6"
   },
   "overrides": {
     "vite": "npm:rolldown-vite@7.1.14"

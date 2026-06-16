@@ -26,6 +26,103 @@ interface LakebaseQueryable {
   query(text: string, params?: unknown[]): Promise<{ rows: Record<string, unknown>[] }>;
 }
 
+interface UrgencyResult {
+  urgency_score: number;
+  urgency_label: string;
+  department: string;
+}
+
+const CONDITION_URGENCY: Record<string, UrgencyResult> = {
+  emergency: { urgency_score: 10, urgency_label: 'Emergency', department: 'Emergency Medicine' },
+  heart: { urgency_score: 9, urgency_label: 'Emergency', department: 'Cardiology' },
+  surgery: { urgency_score: 7, urgency_label: 'Urgent', department: 'Surgery' },
+  pregnancy: { urgency_score: 6, urgency_label: 'Urgent', department: 'Obstetrics & Gynecology' },
+  cancer: { urgency_score: 6, urgency_label: 'Semi-urgent', department: 'Oncology' },
+  child: { urgency_score: 5, urgency_label: 'Semi-urgent', department: 'Pediatrics' },
+  dialysis: { urgency_score: 5, urgency_label: 'Semi-urgent', department: 'Nephrology' },
+  kidney: { urgency_score: 5, urgency_label: 'Semi-urgent', department: 'Nephrology' },
+  diabetes: { urgency_score: 4, urgency_label: 'Routine', department: 'Endocrinology' },
+  hypertension: { urgency_score: 4, urgency_label: 'Routine', department: 'Internal Medicine' },
+  diagnostics: { urgency_score: 3, urgency_label: 'Routine', department: 'Radiology' },
+  general: { urgency_score: 3, urgency_label: 'Routine', department: 'General Medicine' },
+};
+
+function conditionFallback(careNeed: string): UrgencyResult {
+  return CONDITION_URGENCY[careNeed] ?? { urgency_score: 4, urgency_label: 'Routine', department: '' };
+}
+
+function extractUrgencyJSON(raw: string): { urgency_score: unknown; urgency_label: unknown; department: unknown } {
+  const stripped = raw.replace(/```(?:json)?\s*([\s\S]*?)```/g, '$1').trim();
+  const match = stripped.match(/\{[\s\S]*\}/);
+  const jsonStr = match ? match[0] : stripped;
+  const obj = JSON.parse(jsonStr) as Record<string, unknown>;
+  return { urgency_score: obj.urgency_score, urgency_label: obj.urgency_label, department: obj.department };
+}
+
+async function assessUrgency(message: string, careNeed: string): Promise<UrgencyResult> {
+  try {
+    const host = process.env.DATABRICKS_HOST;
+    const token = process.env.DATABRICKS_TOKEN;
+    if (!host || !token) {
+      const fb = conditionFallback(careNeed);
+      console.warn('[urgency] credentials missing, using condition fallback');
+      console.log('[urgency]', { query: message, ...fb, fallback: true });
+      return fb;
+    }
+
+    const systemPrompt =
+      'You are a medical triage nurse. Read the patient request and assign a clinical urgency score 1-10 using common medical sense.\n\n' +
+      'Urgency scale:\n' +
+      '- 9-10: Life-threatening (cardiac, stroke, severe trauma, breathing difficulty)\n' +
+      '- 7-8: Urgent (acute pain, sudden vision/hearing loss, high fever, active bleeding)\n' +
+      '- 5-6: Semi-urgent (cancer care, maternity, pediatric acute, kidney failure management)\n' +
+      '- 3-4: Routine (chronic disease management — diabetes, hypertension, dialysis maintenance)\n' +
+      '- 1-2: Preventive (wellness check-up, screening, prescription renewal)\n\n' +
+      'Also identify the primary medical department (e.g. "eye pain" → Ophthalmology, "heart problem" → Cardiology).\n\n' +
+      'Always respond with ONLY a JSON object:\n' +
+      '{"urgency_score":<integer 1-10>,"urgency_label":"<Emergency|Urgent|Semi-urgent|Routine>","department":"<department>","reasoning":"<one sentence>"}';
+
+    const resp = await fetch(`${host}/serving-endpoints/databricks-llama-4-maverick/invocations`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: message },
+        ],
+        max_tokens: 150,
+        temperature: 0,
+      }),
+      signal: AbortSignal.timeout(10_000),
+    });
+
+    if (!resp.ok) {
+      throw new Error(`LLM returned HTTP ${resp.status}`);
+    }
+
+    const data = (await resp.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    const raw = data?.choices?.[0]?.message?.content ?? '';
+    const parsed = extractUrgencyJSON(raw);
+
+    const score = Math.round(Math.max(1, Math.min(10, Number(parsed.urgency_score))));
+    if (!Number.isFinite(score)) throw new Error('urgency_score not finite');
+
+    const result: UrgencyResult = {
+      urgency_score: score,
+      urgency_label: typeof parsed.urgency_label === 'string' ? parsed.urgency_label : 'Routine',
+      department: typeof parsed.department === 'string' ? parsed.department : '',
+    };
+
+    console.log('[urgency]', { query: message, ...result, fallback: false });
+    return result;
+  } catch (err) {
+    const fb = conditionFallback(careNeed);
+    console.warn('[urgency] assessment failed, using condition fallback:', err instanceof Error ? err.message : String(err));
+    console.log('[urgency]', { query: message, ...fb, fallback: true });
+    return fb;
+  }
+}
+
 interface AppKitWithReferral {
   server: { extend(fn: (app: Application) => void): void };
   lakebase?: LakebaseQueryable;
@@ -86,18 +183,36 @@ export function setupReferralRoutes(appkit: AppKitWithReferral) {
         badRequest(res, '`message` is required.');
         return;
       }
-
       if (lakebaseReady(appkit) || !usePythonBridge()) {
         const parsed = parseReferralMessage(message);
         if (!parsed.ok) {
           res.status(200).json(parsed);
           return;
         }
-        res.json(parsed);
+        const careNeed = parsed.care_need;
+        const urgency = await assessUrgency(message, careNeed);
+        res.json({ ...parsed, ...urgency });
         return;
       }
 
-      await callBridge(res, 'parse', { message });
+      try {
+        const result = await callPythonBridge('parse', { message });
+        if (!result.ok) {
+          if (result.kind === 'needs_clarification' || result.kind === 'empty_message') {
+            res.status(200).json(result);
+          } else {
+            res.status(result.kind === 'missing_params' || result.kind === 'bad_request' ? 400 : 500).json(result);
+          }
+          return;
+        }
+        const careNeed = typeof result.care_need === 'string' ? result.care_need : '';
+        const urgency = await assessUrgency(message, careNeed);
+        res.json({ ...result, ...urgency });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error('[referral_routes] parse failed:', msg);
+        res.status(502).json({ ok: false, kind: 'bridge_error', error: msg });
+      }
     });
 
     app.post('/api/referral/search', async (req: Request, res: Response) => {
@@ -111,6 +226,7 @@ export function setupReferralRoutes(appkit: AppKitWithReferral) {
         return;
       }
 
+      const urgencyScore = asNumberOrNull(body.urgency_score);
       const payload = {
         care_need,
         care_type: typeof body.care_type === 'string' ? body.care_type : 'specialist',
@@ -121,6 +237,8 @@ export function setupReferralRoutes(appkit: AppKitWithReferral) {
         max_distance_km: asNumberOrNull(body.max_distance_km) ?? 75,
         top_n: asNumberOrNull(body.top_n) ?? 10,
         use_feedback_reranking: body.use_feedback_reranking !== false,
+        // Optional — if missing, Python bridge uses original pipeline ranking unchanged
+        ...(urgencyScore != null ? { urgency_score: urgencyScore } : {}),
       };
 
       if (lakebaseReady(appkit)) {

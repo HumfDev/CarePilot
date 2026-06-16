@@ -126,6 +126,76 @@ CARE_NEED_PATTERNS: list[tuple[re.Pattern[str], str, str]] = [
     (re.compile(r"\bgeneral\b|\bclinic\b|\bcheck[- ]?up\b|\bopd\b", re.I), "general", "general"),
 ]
 
+# ---------------------------------------------------------------------------
+# Urgency-aware distance re-weighting
+# ---------------------------------------------------------------------------
+# Distance bucket tables by care_type: list of (upper_km, score_0_to_100)
+_URGENCY_DISTANCE_BUCKETS: dict[str, list[tuple[float, float]]] = {
+    "emergency": [(2, 100), (5, 85), (10, 60), (20, 35)],
+    "general":   [(5, 100), (10, 85), (25, 65), (50, 40)],
+    "specialist":[(10, 100), (25, 85), (50, 70), (100, 45)],
+    "maternity": [(5, 100), (10, 85), (25, 65), (50, 40)],
+    "chronic":   [(10, 100), (25, 85), (50, 70), (100, 45)],
+}
+# Non-distance base weights by care_type (mirror facility_scoring_pipeline.py)
+_URGENCY_NONDIST_WEIGHTS: dict[str, dict[str, float]] = {
+    "emergency": {"condition": 0.20, "trust": 0.15, "evidence": 0.20, "local_need": 0.05},
+    "general":   {"condition": 0.20, "trust": 0.25, "evidence": 0.20, "local_need": 0.05},
+    "specialist":{"condition": 0.30, "trust": 0.20, "evidence": 0.25, "local_need": 0.05},
+    "maternity": {"condition": 0.25, "trust": 0.20, "evidence": 0.20, "local_need": 0.05},
+    "chronic":   {"condition": 0.30, "trust": 0.20, "evidence": 0.25, "local_need": 0.05},
+}
+
+
+def _dist_score_from_km(dist_km: float, care_type: str) -> float:
+    buckets = _URGENCY_DISTANCE_BUCKETS.get(care_type, _URGENCY_DISTANCE_BUCKETS["specialist"])
+    for upper, score in buckets:
+        if dist_km <= upper:
+            return float(score)
+    return 15.0
+
+
+def _apply_urgency_reweighting(candidates: list[dict], urgency: float, care_type: str) -> list[dict]:
+    """Re-rank candidates using a quadratic distance-weight curve driven by urgency score.
+
+    Formula (fitted to urgency=2→15%, 3→20%, 9→80%):
+        w_distance = min(0.88, (u² + 2u + 13) / 140)
+    Cap at 0.88 so trust/evidence/condition always contribute ≥ 12%.
+    """
+    u = max(1.0, min(10.0, float(urgency)))
+    w_dist = min(0.88, (u * u + 2 * u + 13) / 140.0)
+    base = _URGENCY_NONDIST_WEIGHTS.get(care_type, _URGENCY_NONDIST_WEIGHTS["specialist"])
+    total_nondist = sum(base.values())
+    remaining = 1.0 - w_dist
+
+    print(
+        f"[urgency] score={u:.1f} w_distance={w_dist:.3f} care_type={care_type}",
+        flush=True,
+    )
+
+    for c in candidates:
+        dist_km = float(c.get("distance_km") or 999)
+        ds = _dist_score_from_km(dist_km, care_type)
+        cond  = float(c.get("disease_match_score")   or 50)
+        trust = float(c.get("baseline_trust_score")  or 50)
+        evid  = float(c.get("evidence_strength_score") or 50)
+        lneed = float(c.get("local_need_score")      or 50)
+
+        new_score = (
+            w_dist * ds
+            + (base["condition"]  / total_nondist) * remaining * cond
+            + (base["trust"]      / total_nondist) * remaining * trust
+            + (base["evidence"]   / total_nondist) * remaining * evid
+            + (base["local_need"] / total_nondist) * remaining * lneed
+        )
+        c["urgency_adjusted_score"] = round(min(100.0, max(0.0, new_score)), 1)
+
+    candidates.sort(key=lambda c: c.get("urgency_adjusted_score", 0), reverse=True)
+    for i, c in enumerate(candidates):
+        c["rank"] = i + 1
+
+    return candidates
+
 
 # ---------------------------------------------------------------------------
 # Lazy imports + dataset cache
@@ -480,6 +550,15 @@ def op_search(payload: dict) -> dict:
                 feedback_applied = False
 
     candidates = [_row_to_candidate(row, rank=i + 1) for i, (_, row) in enumerate(ranked.iterrows())]
+
+    # Urgency-aware re-weighting (optional — only if urgency_score was provided)
+    urgency_score = payload.get("urgency_score")
+    if urgency_score is not None:
+        try:
+            candidates = _apply_urgency_reweighting(candidates, float(urgency_score), care_type)
+        except Exception as exc:
+            sys.stderr.write(f"[referral_cli] urgency re-weighting failed, using original ranking: {exc}\n")
+
     return {
         "ok": True,
         "scenario_id": sid,

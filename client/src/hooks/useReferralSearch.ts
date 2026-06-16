@@ -195,6 +195,11 @@ export function useReferralSearch(options: UseReferralSearchOptions = {}) {
   const [scenarioId, setScenarioId] = useState<string | null>(null);
   const [feedbackApplied, setFeedbackApplied] = useState(false);
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
+  const [urgencyInfo, setUrgencyInfo] = useState<{
+    urgency_score?: number;
+    urgency_label?: string;
+    department?: string;
+  } | null>(null);
   const [search, setSearch] = useState<SearchActionState>({
     loading: false,
     summarizing: false,
@@ -307,6 +312,14 @@ export function useReferralSearch(options: UseReferralSearchOptions = {}) {
         return;
       }
 
+      // Capture urgency from parse response (display hint + score weighting)
+      const urgency = {
+        urgency_score: parsed.urgency_score,
+        urgency_label: parsed.urgency_label,
+        department: parsed.department,
+      };
+      setUrgencyInfo(urgency);
+
       const params: ReferralSearchParams = {
         care_need: parsed.care_need,
         care_type: parsed.care_type,
@@ -316,6 +329,7 @@ export function useReferralSearch(options: UseReferralSearchOptions = {}) {
         ranking_priority: parsed.ranking_priority,
         max_distance_km: parsed.max_distance_km,
         top_n: parsed.top_n,
+        ...(parsed.urgency_score != null ? { urgency_score: parsed.urgency_score } : {}),
       };
 
       if (searchParams && candidates.length > 0 && searchParamsMatch(params, searchParams)) {
@@ -372,6 +386,12 @@ export function useReferralSearch(options: UseReferralSearchOptions = {}) {
         return;
       }
 
+      setUrgencyInfo({
+        urgency_score: parsed.urgency_score,
+        urgency_label: parsed.urgency_label,
+        department: parsed.department,
+      });
+
       const params: ReferralSearchParams = {
         care_need: parsed.care_need,
         care_type: parsed.care_type,
@@ -381,6 +401,7 @@ export function useReferralSearch(options: UseReferralSearchOptions = {}) {
         ranking_priority: parsed.ranking_priority,
         max_distance_km: parsed.max_distance_km,
         top_n: parsed.top_n,
+        ...(parsed.urgency_score != null ? { urgency_score: parsed.urgency_score } : {}),
       };
 
       if (input.plannerLocation) {
@@ -505,6 +526,7 @@ export function useReferralSearch(options: UseReferralSearchOptions = {}) {
     userLocation,
     search,
     actionPending,
+    urgencyInfo,
     submitMessage,
     searchFromSidebar,
     clearSearch,

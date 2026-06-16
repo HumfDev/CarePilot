@@ -1,25 +1,22 @@
 #!/usr/bin/env bash
-# Sync dh_EDA.ipynb healthcare Unity Catalog tables into Lakebase Postgres.
-# Requires CREATE CATALOG on the workspace metastore (workspace admin).
+# Sync healthcare Unity Catalog tables into Lakebase Postgres.
 set -euo pipefail
 
-PROFILE="${DATABRICKS_CONFIG_PROFILE:-dbc-72018123-58b0}"
-PROJECT="carepilot-db"
+PROJECT="skyler-carepilot"
 BRANCH="projects/${PROJECT}/branches/production"
-LAKEBASE_CATALOG="carepilot_lakebase"
+LAKEBASE_CATALOG="skyler_carepilot_lakebase"
 SCHEMA="healthcare"
 STORAGE_CATALOG="workspace"
 STORAGE_SCHEMA="default"
 
 echo "==> Register Lakebase database as UC catalog: ${LAKEBASE_CATALOG}"
 databricks postgres create-catalog "${LAKEBASE_CATALOG}" \
-  --profile "${PROFILE}" \
   --json "{
     \"spec\": {
       \"postgres_database\": \"databricks_postgres\",
       \"branch\": \"${BRANCH}\"
     }
-  }"
+  }" || echo "(catalog may already exist, continuing)"
 
 create_synced_table() {
   local table="$1"
@@ -28,7 +25,6 @@ create_synced_table() {
 
   echo "==> Syncing ${source} -> ${LAKEBASE_CATALOG}.${SCHEMA}.${table}"
   databricks postgres create-synced-table "${LAKEBASE_CATALOG}.${SCHEMA}.${table}" \
-    --profile "${PROFILE}" \
     --json "{
       \"spec\": {
         \"source_table_full_name\": \"${source}\",
@@ -42,8 +38,12 @@ create_synced_table() {
           \"storage_schema\": \"${STORAGE_SCHEMA}\"
         }
       }
-    }"
+    }" || echo "(table sync may already exist, continuing)"
 }
+
+create_synced_table "facility_feature_table_v4" \
+  "workspace.default.facility_feature_table_v4" \
+  '["facility_id"]'
 
 create_synced_table "facilities" \
   "databricks_virtue_foundation_dataset_dais_2026.virtue_foundation_dataset.facilities" \
@@ -57,7 +57,4 @@ create_synced_table "nfhs_5_district_health_indicators" \
   "databricks_virtue_foundation_dataset_dais_2026.virtue_foundation_dataset.nfhs_5_district_health_indicators" \
   '["district_name", "state_ut"]'
 
-echo "==> Done. After sync completes, add these tables to the Genie space:"
-echo "    ${LAKEBASE_CATALOG}.${SCHEMA}.facilities"
-echo "    ${LAKEBASE_CATALOG}.${SCHEMA}.india_post_pincode_directory"
-echo "    ${LAKEBASE_CATALOG}.${SCHEMA}.nfhs_5_district_health_indicators"
+echo "==> Done. Sync pipelines created — data will appear in Lakebase within a few minutes."
