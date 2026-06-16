@@ -6,3 +6,9 @@ env:
     valueFrom: genie-space
   - name: DATABRICKS_WAREHOUSE_ID
     valueFrom: sql-warehouse
+  - name: DATABRICKS_SERVING_ENDPOINT_NAME
+    valueFrom: serving-endpoint
+  - name: CAREPILOT_LLM_MODEL
+    value: databricks-llama-4-maverick
+  - name: ROUTE_ENGINE
+    value: osrm_with_fallback

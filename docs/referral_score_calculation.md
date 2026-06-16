@@ -4,7 +4,8 @@ This document explains how **CarePilot Referral Copilot** scores and ranks facil
 
 > **Important:** The recommendation score shown in the ranked list is **not** the same as `trust_score_v2` (map marker colour).  
 > Rankings use a per-request **evidence-aware recommendation score** recomputed for every search.  
-> Implementation: `carepilot-referral/facility_scoring_pipeline.py` — CarePilot only invokes it via `python_bridge/referral_cli.py`.
+> Implementation (production): `server/lib/lakebase-referral-search.ts` + `server/lib/referral-scoring.ts` over Lakebase synced `facility_features_v4`.  
+> Local fallback: `carepilot-referral/facility_scoring_pipeline.py` via `python_bridge/referral_cli.py` when `CAREPILOT_USE_PYTHON_BRIDGE=1`.
 
 **Not medical advice.** Scores are a planner-facing sorting aid. Always verify by phone call or the official website before referral.
 

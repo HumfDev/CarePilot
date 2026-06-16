@@ -1,114 +1,137 @@
-# RAG Chat App
+# CarePilot Referral Copilot
 
-Streaming Retrieval-Augmented Generation chat app:
+Evidence-aware healthcare facility referral copilot for India — map, ranked candidates, OSRM routes, and Databricks-powered summaries.
 
-- **pgvector** retrieval over a documents table in Lakebase Postgres.
-- **Lakebase**-backed chat history (one row per turn).
-- **Model Serving** for chat completion (default `databricks-gpt-5-4-mini`).
-- **AI Gateway** for embeddings (default `databricks-gte-large-en`).
-- Wikipedia seeding on first startup (configurable via `RAG_RESEED`).
+**Live app:** https://carepilot-2975424914277074.aws.databricksapps.com
 
-The template is built on [AppKit](https://databricks.github.io/appkit/) with the **Lakebase** and **Server** plugins.
+Built on [Databricks AppKit](https://databricks.github.io/appkit/) with **Lakebase Postgres**, **Unity Catalog synced tables**, **Genie**, and **Model Serving** (Llama 4 Maverick).
 
-## Prerequisites
+## What it does
 
-- Node.js v22+ and npm
-- [Databricks CLI](https://docs.databricks.com/aws/en/dev-tools/cli/install) configured with a profile
-- Access to Model Serving (chat) and AI Gateway (embeddings) endpoints in your workspace
+- **Referral search** — natural language (`dialysis near Jaipur`) → evidence-ranked facility list + map markers
+- **Lakebase SQL scoring** — `facilities` ⨝ `facility_features_v4` (UC sync) with trust, NFHS local-need, distance, and evidence signals
+- **Planner workspace** — shortlist, notes, review decisions, overrides persisted in Lakebase `referral` schema
+- **Routes** — OSRM driving ETA overlays
+- **Genie tab** (production) — ad-hoc queries on Virtue Foundation + NFHS datasets
+- **Llama summaries** — search recap and candidate card explanations via Model Serving
 
-## One-shot deploy
+> Planner-facing tool — not medical advice. Verify before referral.
 
-This template is designed to be scaffolded with `databricks apps init` (not cloned). The commands below take you from zero to a running deployed app.
+## Data flow
 
-### 1. Verify Databricks CLI auth
-
-```bash
-databricks auth profiles
-# If no profile shows Valid: YES:
-databricks auth login --profile <profile> --host <workspace-url>
+```mermaid
+flowchart LR
+  subgraph UC["Unity Catalog"]
+    VF[virtue_foundation.facilities]
+    V4[facility_feature_table_v4]
+  end
+  subgraph LB["Lakebase Postgres"]
+    SF[healthcare.facilities]
+    S4[healthcare.facility_features_v4]
+    RP[referral.* planner tables]
+  end
+  subgraph App["CarePilot Databricks App"]
+    UI[React Map + Chat]
+    API[Express /api/referral/*]
+    SQL[Lakebase SQL search]
+    LLM[Model Serving Llama]
+    GEN[Genie healthcare space]
+  end
+  VF -->|synced table| SF
+  V4 -->|synced table| S4
+  UI --> API
+  API --> SQL
+  SQL --> SF
+  SQL --> S4
+  API --> RP
+  API --> LLM
+  UI --> GEN
 ```
 
-Export the profile so subsequent commands pick it up:
+## Deploy (Databricks App)
+
+### Prerequisites
+
+- Databricks CLI authenticated (`databricks auth login`)
+- Lakebase project bound in `databricks.yml`
+- UC synced tables: `healthcare.facilities`, `healthcare.facility_features_v4` (see `docs/v4-scoring-integration.md`)
+- Model Serving endpoint: `databricks-llama-4-maverick` (or update `serving_endpoint_name` in `databricks.yml`)
+
+### Commands
 
 ```bash
-export DATABRICKS_CONFIG_PROFILE=<profile>
-```
-
-### 2. Create a Lakebase Postgres project
-
-Pick a short, lowercase ID for the project (e.g. `rag-chat`). `create-project` automatically provisions a default `production` branch plus a default database, so no separate `create-branch` / `create-database` calls are needed:
-
-```bash
-PROJECT_ID=rag-chat
-
-databricks postgres create-project "$PROJECT_ID"
-
-BRANCH_NAME="projects/$PROJECT_ID/branches/production"
-DATABASE_NAME=$(databricks api get "/api/2.0/postgres/$BRANCH_NAME/databases" -o json | \
-  python3 -c "import json,sys; print(json.load(sys.stdin)['databases'][0]['name'])")
-
-echo "Branch:   $BRANCH_NAME"
-echo "Database: $DATABASE_NAME"
-```
-
-### 3. Scaffold the app from this template
-
-```bash
-databricks apps init \
-  --name rag-chat-app \
-  --template https://github.com/databricks/app-templates/tree/main/rag-chat \
-  --set lakebase.postgres.branch="$BRANCH_NAME" \
-  --set lakebase.postgres.database="$DATABASE_NAME"
-
-cd rag-chat-app
-```
-
-`init` creates the app in the workspace, binds the Lakebase resource, and writes a local `.env` with the resolved connection details.
-
-### 4. Install and deploy
-
-```bash
+export DATABRICKS_CONFIG_PROFILE=DEFAULT
+cd CarePilot
 npm install
 npm run deploy
 ```
 
-`npm run deploy` runs `scripts/sync-bundle-vars.mjs` (which hydrates `.databricks/bundle/default/variable-overrides.json` from the app's bound postgres resource) and then `databricks bundle deploy` followed by `databricks bundle run app`. The final line prints the app URL.
+`npm run deploy` runs bundle sync → `databricks bundle deploy` → `databricks bundle run app`.
 
-`DATABRICKS_WORKSPACE_ID` and the Lakebase connection variables are auto-injected into the deployed runtime from `app.yaml` and the bound `postgres` resource — no further `.env` work is needed for deploy.
+**Do not set `CAREPILOT_LOCAL_DEMO` in production** — the app loads Lakebase + Genie automatically.
 
-## Develop locally
+### Runtime env (app.yaml)
 
-Local `npm run dev` needs `DATABRICKS_WORKSPACE_ID` (the **numeric** id used to build the AI Gateway URL, `https://<id>.ai-gateway.cloud.databricks.com`) in `.env`. Fetch and patch it:
+| Variable | Source |
+|----------|--------|
+| `LAKEBASE_ENDPOINT` | Lakebase postgres resource |
+| `DATABRICKS_GENIE_SPACE_ID` | Genie space resource |
+| `DATABRICKS_WAREHOUSE_ID` | SQL warehouse |
+| `DATABRICKS_SERVING_ENDPOINT_NAME` | Serving endpoint |
+| `CAREPILOT_LLM_MODEL` | `databricks-llama-4-maverick` |
+
+## Local development
+
+### Production-parity (Lakebase SQL)
+
+Unset `CAREPILOT_LOCAL_DEMO`, configure Lakebase credentials in `.env`, and run:
 
 ```bash
-WORKSPACE_ID=$(databricks api get /api/2.1/unity-catalog/current-metastore-assignment \
-  | python3 -c "import json,sys;print(json.load(sys.stdin)['workspace_id'])")
-sed -i.bak "s/^DATABRICKS_WORKSPACE_ID=.*/DATABRICKS_WORKSPACE_ID=$WORKSPACE_ID/" .env && rm .env.bak
-
-npm install
 npm run dev
 ```
 
-Optionally override `DATABRICKS_ENDPOINT` / `DATABRICKS_EMBEDDING_ENDPOINT` in `.env` if you want different chat / embeddings endpoints (also applies to deploy via `app.yaml`).
+### Quick demo (Python CSV bridge)
 
-The first run seeds a handful of Wikipedia articles into the `rag.documents` table. Set `RAG_RESEED=true` in `.env` to re-seed on every restart.
+```bash
+# .env
+CAREPILOT_LOCAL_DEMO=1
+CAREPILOT_USE_PYTHON_BRIDGE=1
+CAREPILOT_BACKEND_DIR=/path/to/carepilot-referral
+CAREPILOT_BACKEND_CSV=/path/to/clean_facilities_v4.csv
+```
+
+Optional: `CAREPILOT_ENABLE_GENIE=1` to show the Genie tab locally (requires Genie credentials).
+
+## Demo script (judges / stakeholders)
+
+1. Open the app → **Plan your trip** sidebar pre-filled: `Jaipur` + `dialysis`
+2. Click **Search** — ranked candidates appear on map and list
+3. Click **Hide** — form collapses; **Ranked results · N** moves up
+4. Select a facility → open evidence card → **Route** for OSRM ETA
+5. Chat: ask *"why is #1 ranked highest?"* — Llama follow-up
+6. Switch to **Genie data** tab → ask about NFHS indicators or facility counts
 
 ## Project layout
 
-- `client/` — React + Tailwind + shadcn/ui frontend.
-- `server/` — Express backend.
-  - `server/lib/rag-store.ts` — pgvector schema, similarity search.
-  - `server/lib/chat-store.ts` — chat history schema, append/list helpers.
-  - `server/lib/embeddings.ts` — AI Gateway embedding call.
-  - `server/lib/seed-data.ts` — Wikipedia fetch + chunk + embed.
-  - `server/routes/chat-routes.ts` — streaming chat completion with RAG context injection.
-  - `server/routes/chat-persistence-routes.ts` — list chats, load chat history.
-- `scripts/sync-bundle-vars.mjs` — hydrates bundle variable overrides from the app's postgres resource so `databricks bundle deploy` resolves cleanly.
-- `appkit.plugins.json` — AppKit plugin manifest (Lakebase + Server).
-- `databricks.yml` — Asset Bundle config.
-- `app.yaml` — Databricks App runtime config.
+| Path | Role |
+|------|------|
+| `server/lib/lakebase-referral-search.ts` | Lakebase SQL candidate retrieval |
+| `server/lib/referral-scoring.ts` | Evidence-aware ranking (TypeScript) |
+| `server/lib/lakebase-referral-store.ts` | Planner persistence in Lakebase |
+| `server/lib/referral-llm.ts` | Model Serving summaries |
+| `server/routes/referral-routes.ts` | `/api/referral/*` HTTP API |
+| `client/src/pages/ChatPage.tsx` | Map + Referral/Genie chat layout |
+| `docs/DEPLOY_AND_DEMO.md` | Extended deploy + sync checklist |
+| `docs/v4-scoring-integration.md` | UC → Lakebase sync for v4 scores |
 
-## Related DevHub resources
+## API
 
-- [Lakebase Agent Memory](https://dev.databricks.com/templates/lakebase-agent-memory)
-- [Streaming AI chat with Model Serving](https://dev.databricks.com/resources/ai-chat-model-serving)
+| Endpoint | Description |
+|----------|-------------|
+| `POST /api/referral/parse` | NL → structured search params |
+| `POST /api/referral/search` | Lakebase SQL + ranked candidates |
+| `GET /api/referral/status` | Engine mode (`lakebase_sql` / `python_bridge`) |
+| `GET /api/map/facilities` | Map markers with trust scores |
+| `POST /api/route/mock` | OSRM route polyline + ETA |
+
+See `docs/referral_score_calculation.md` for scoring detail.

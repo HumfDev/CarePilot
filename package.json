@@ -28,7 +28,7 @@
   "keywords": [],
   "author": "",
   "license": "Unlicensed",
-  "description": "Streaming AI chat with Model Serving and Lakebase-persisted chat history",
+  "description": "Evidence-aware referral copilot — Lakebase SQL, Genie, Model Serving",
   "dependencies": {
     "@ai-sdk/openai": "^3.0.48",
     "@ai-sdk/react": "^3.0.140",

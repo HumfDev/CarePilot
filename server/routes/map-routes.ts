@@ -1,4 +1,5 @@
 import type { Application } from 'express';
+import { LB } from '../lib/lakebase-tables';
 
 interface AppKitWithLakebase {
   lakebase: {
@@ -48,8 +49,8 @@ export function setupMapRoutes(appkit: AppKitWithLakebase) {
                s.is_hospital,
                s.nfhs_matched,
                s.coord_source
-        FROM carepilot_lakebase.healthcare.facilities f
-        LEFT JOIN carepilot_lakebase.healthcare.facility_features_v4 s
+        FROM ${LB.facilities} f
+        LEFT JOIN ${LB.facilityFeaturesV4} s
           ON f.unique_id = s.facility_id
         WHERE f.latitude IS NOT NULL
           AND f.longitude IS NOT NULL

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { IndiaMapPanel } from '../components/IndiaMapPanel';
-import { ReferralChatPanel } from '../components/ReferralChatPanel';
+import { RightChatPanel } from '../components/RightChatPanel';
 import { ReferralCandidateCard } from '../components/ReferralCandidateCard';
 import { AppBrand } from '../components/AppBrand';
 import { useReferralSearch } from '../hooks/useReferralSearch';
@@ -103,7 +103,7 @@ export function ChatPage() {
           </Panel>
           <PanelResizeHandle className="w-1 bg-neutral-200 transition-colors hover:bg-neutral-300" />
           <Panel defaultSize={28} minSize={20}>
-            <ReferralChatPanel referral={referral} />
+            <RightChatPanel referral={referral} />
           </Panel>
         </PanelGroup>
       </main>

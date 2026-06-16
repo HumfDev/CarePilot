@@ -1,54 +1,75 @@
 import { createApp, server, lakebase, genie } from '@databricks/appkit';
 import { setupHealthcareLakebase } from './lib/lakebase-setup';
+import { setupReferralLakebaseSchema } from './lib/lakebase-referral-schema';
 import { setupMapRoutes } from './routes/map-routes';
 import { setupMapSearchRoutes } from './routes/map-search-routes';
 import { setupReferralRoutes } from './routes/referral-routes';
 import { setupRouteMockRoutes } from './routes/route-mock';
+import { isGenieEnabled, isLocalDemo, usePythonBridge } from './lib/runtime-config';
 import { warmupPythonBridge } from './lib/python-bridge';
+
+interface AppKitWithLakebase {
+  lakebase: {
+    query(text: string, params?: unknown[]): Promise<{ rows: Record<string, unknown>[] }>;
+  };
+}
+
+function asLakebaseAppkit(appkit: object): AppKitWithLakebase | null {
+  if (!('lakebase' in appkit)) return null;
+  const lakebase = (appkit as { lakebase?: AppKitWithLakebase['lakebase'] }).lakebase;
+  if (!lakebase || typeof lakebase.query !== 'function') return null;
+  return { lakebase };
+}
 
 const GENIE_HEALTHCARE_SPACE_ID =
   process.env.DATABRICKS_GENIE_SPACE_ID ?? '01f16954e5791df78bb099133a0041be';
 
-// `CAREPILOT_LOCAL_DEMO=1` skips the Lakebase + Genie plugins so the dev
-// server boots without Postgres/Genie credentials. The Referral Copilot flow
-// (Python bridge) and the mock-route endpoint don't need either of those, and
-// the React shell falls back to the static facilities-fallback.json when the
-// Lakebase-backed /api/map/facilities is absent. Production deploys leave the
-// flag unset and get the full plugin stack.
-const LOCAL_DEMO = process.env.CAREPILOT_LOCAL_DEMO === '1';
-
-const plugins = LOCAL_DEMO
+const plugins = isLocalDemo()
   ? [server()]
   : [
       lakebase(),
       server(),
-      genie({
-        spaces: {
-          healthcare: GENIE_HEALTHCARE_SPACE_ID,
-        },
-      }),
+      ...(isGenieEnabled()
+        ? [
+            genie({
+              spaces: {
+                healthcare: GENIE_HEALTHCARE_SPACE_ID,
+              },
+            }),
+          ]
+        : []),
     ];
 
-if (LOCAL_DEMO) {
+if (isLocalDemo()) {
   console.log(
-    '[carepilot] CAREPILOT_LOCAL_DEMO=1 — Lakebase + Genie skipped; ' +
-      'serving Referral Copilot + mock-route endpoints only.',
+    '[carepilot] CAREPILOT_LOCAL_DEMO=1 — Lakebase + Genie skipped. ' +
+      'Set CAREPILOT_USE_LAKEBASE_REFERRAL=1 with Lakebase credentials for SQL search, ' +
+      'or CAREPILOT_USE_PYTHON_BRIDGE=1 for the CSV bridge.'
+  );
+} else {
+  console.log(
+    `[carepilot] Production mode — Lakebase referral search enabled${isGenieEnabled() ? ', Genie enabled' : ', Genie disabled'}.`
   );
 }
 
 createApp({
   plugins,
   async onPluginsReady(appkit) {
-    if (!LOCAL_DEMO) {
-      await setupHealthcareLakebase(appkit);
-      setupMapRoutes(appkit);
+    const lakeApp = asLakebaseAppkit(appkit);
+    if (!isLocalDemo() && lakeApp) {
+      await setupHealthcareLakebase(lakeApp);
+      await setupReferralLakebaseSchema(lakeApp.lakebase);
+      setupMapRoutes({ server: appkit.server, lakebase: lakeApp.lakebase });
     }
-    setupReferralRoutes(appkit);
+    setupReferralRoutes({
+      server: appkit.server,
+      ...(lakeApp ? { lakebase: lakeApp.lakebase } : {}),
+    });
     setupRouteMockRoutes(appkit);
     setupMapSearchRoutes(appkit);
-    // Fire-and-forget warmup so the first chat search is fast. Failures are
-    // logged but do not block server boot — the bridge will lazily warm on the
-    // first real request.
-    void warmupPythonBridge();
+
+    if (usePythonBridge()) {
+      void warmupPythonBridge();
+    }
   },
 }).catch(console.error);

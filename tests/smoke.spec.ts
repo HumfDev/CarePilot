@@ -1,11 +1,10 @@
 import { test, expect } from '@playwright/test';
 
-test('CarePilot shows map and Genie chat panels', async ({ page }) => {
+test('CarePilot shows map and referral chat', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByTestId('india-map-panel')).toBeVisible();
-  await expect(page.getByTestId('genie-panel')).toBeVisible();
-  await expect(page.getByText('India Healthcare Map')).toBeVisible();
-  await expect(
-    page.getByPlaceholder('Ask about facilities, health indicators, or PIN codes...'),
-  ).toBeVisible();
+  await expect(page.getByTestId('right-chat-panel')).toBeVisible();
+  await expect(page.getByTestId('map-search-sidebar')).toBeVisible();
+  await expect(page.getByText('Plan your trip')).toBeVisible();
+  await expect(page.getByPlaceholder('Try "dialysis near Jaipur"')).toBeVisible();
 });
