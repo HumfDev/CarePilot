@@ -77,9 +77,11 @@ export interface ReferralCandidate {
 
 export interface ReferralSearchResponse {
   ok: true;
-  scenario_id: string;
+  scenario_id: string | null;
   feedback_applied: boolean;
   candidates: ReferralCandidate[];
+  data_not_ready?: boolean;
+  message?: string;
 }
 
 export type ReviewDecision = 'accepted' | 'needs_verification' | 'rejected';

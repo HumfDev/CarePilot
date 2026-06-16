@@ -5,7 +5,10 @@
 import type { Application, Request, Response } from 'express';
 import type { ReferralCandidate } from '../../shared/referral';
 import { callPythonBridge } from '../lib/python-bridge';
-import { searchReferralCandidatesLakebase } from '../lib/lakebase-referral-search';
+import {
+  checkLakebaseReferralReady,
+  searchReferralCandidatesLakebase,
+} from '../lib/lakebase-referral-search';
 import {
   getFeedbackForScenario,
   saveNote,
@@ -71,11 +74,23 @@ async function callBridge(res: Response, op: Parameters<typeof callPythonBridge>
 export function setupReferralRoutes(appkit: AppKitWithReferral) {
   appkit.server.extend((app) => {
     app.get('/api/referral/status', async (_req, res) => {
+      let data_ready = false;
+      let facility_count = 0;
+      let scored_count = 0;
+      if (lakebaseReady(appkit)) {
+        const readiness = await checkLakebaseReferralReady(appkit.lakebase);
+        data_ready = readiness.ready;
+        facility_count = readiness.facilityCount;
+        scored_count = readiness.scoredCount;
+      }
       res.json({
         ok: true,
         engine: lakebaseReady(appkit) ? 'lakebase_sql' : usePythonBridge() ? 'python_bridge' : 'unconfigured',
         genie_enabled: isGenieEnabled(),
         local_demo: process.env.CAREPILOT_LOCAL_DEMO === '1',
+        data_ready,
+        facility_count,
+        scored_count,
       });
     });
 
@@ -88,12 +103,18 @@ export function setupReferralRoutes(appkit: AppKitWithReferral) {
       }
 
       if (lakebaseReady(appkit) || !usePythonBridge()) {
-        const parsed = parseReferralMessage(message);
-        if (!parsed.ok) {
-          res.status(200).json(parsed);
-          return;
+        try {
+          const parsed = parseReferralMessage(message);
+          if (!parsed.ok) {
+            res.status(200).json(parsed);
+            return;
+          }
+          res.json(parsed);
+        } catch (err) {
+          const errMessage = err instanceof Error ? err.message : String(err);
+          console.error('[referral_routes] parse failed:', errMessage);
+          res.status(500).json({ ok: false, kind: 'parse_error', error: errMessage });
         }
-        res.json(parsed);
         return;
       }
 
@@ -125,6 +146,21 @@ export function setupReferralRoutes(appkit: AppKitWithReferral) {
 
       if (lakebaseReady(appkit)) {
         try {
+          const readiness = await checkLakebaseReferralReady(appkit.lakebase);
+          if (!readiness.ready) {
+            res.status(200).json({
+              ok: true,
+              scenario_id: null,
+              feedback_applied: false,
+              candidates: [],
+              data_not_ready: true,
+              message:
+                'Facility tables are not synced in this workspace yet. ' +
+                `Found ${readiness.facilityCount} facilities and ${readiness.scoredCount} scored rows in Lakebase. ` +
+                'Sync healthcare.facilities and healthcare.facility_features_v4 from Unity Catalog, then retry.',
+            });
+            return;
+          }
           const result = await searchReferralCandidatesLakebase(appkit.lakebase, payload);
           res.json({ ok: true, ...result });
         } catch (err) {

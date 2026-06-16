@@ -57,10 +57,24 @@ createApp({
   async onPluginsReady(appkit) {
     const lakeApp = asLakebaseAppkit(appkit);
     if (!isLocalDemo() && lakeApp) {
-      await setupHealthcareLakebase(lakeApp);
-      await setupReferralLakebaseSchema(lakeApp.lakebase);
-      setupMapRoutes({ server: appkit.server, lakebase: lakeApp.lakebase });
+      try {
+        await setupHealthcareLakebase(lakeApp);
+      } catch (err) {
+        console.error('[carepilot] healthcare Lakebase setup failed:', err);
+      }
+      try {
+        await setupReferralLakebaseSchema(lakeApp.lakebase);
+      } catch (err) {
+        console.error('[carepilot] referral schema setup failed:', err);
+      }
+      try {
+        setupMapRoutes({ server: appkit.server, lakebase: lakeApp.lakebase });
+      } catch (err) {
+        console.error('[carepilot] map routes setup failed:', err);
+      }
     }
+
+    // Always register referral + utility routes even if Lakebase DDL failed.
     setupReferralRoutes({
       server: appkit.server,
       ...(lakeApp ? { lakebase: lakeApp.lakebase } : {}),
@@ -72,4 +86,7 @@ createApp({
       void warmupPythonBridge();
     }
   },
-}).catch(console.error);
+}).catch((err) => {
+  console.error('[carepilot] fatal app startup error:', err);
+  process.exit(1);
+});

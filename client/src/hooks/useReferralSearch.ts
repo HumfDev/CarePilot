@@ -238,6 +238,10 @@ export function useReferralSearch(options: UseReferralSearchOptions = {}) {
           return;
         }
         const nextCandidates = res.candidates ?? [];
+        const dataMessage =
+          res.data_not_ready && typeof res.message === 'string'
+            ? res.message
+            : null;
         setSearchParams(params);
         setCandidates(nextCandidates);
         setScenarioId(res.scenario_id ?? null);
@@ -248,6 +252,15 @@ export function useReferralSearch(options: UseReferralSearchOptions = {}) {
         });
         setSearch({ loading: false, summarizing: !opts.quiet, error: null });
         if (!opts.quiet) {
+          if (dataMessage) {
+            appendMessage({
+              role: 'assistant',
+              text: dataMessage,
+              meta: { kind: 'data_not_ready' },
+            });
+            setSearch({ loading: false, summarizing: false, error: null });
+            return;
+          }
           const llamaText = await fetchLlamaSearchSummary(params, res.candidates ?? [], !!res.feedback_applied);
           appendMessage({
             role: 'assistant',
