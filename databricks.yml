@@ -6,6 +6,7 @@ sync:
     - dh_EDA.ipynb.ipynb
     - node_modules/**
     - .git/**
+    - .env
     - client/dist/**
     - dist/**
 
@@ -63,3 +64,20 @@ targets:
       genie_space_name: CarePilot Healthcare Data
       sql_warehouse_id: b2bb07abff382b79
       serving_endpoint_name: databricks-llama-4-maverick
+
+  # Hackathon / carepliots workspace (736467640869366).
+  # Set profile: export DATABRICKS_CONFIG_PROFILE=hackathon
+  # Discover vars: npm run discover:hackathon
+  # Deploy:       npm run deploy:hackathon
+  hackathon:
+    variables:
+      postgres_branch: projects/carepilot-db/branches/production
+      postgres_database: projects/carepilot-db/branches/production/databases/databricks-postgres
+      genie_space_id: 01f0b53e17601644b2877a47e3b467e8
+      genie_space_name: Bakehouse Sales Starter Space
+      sql_warehouse_id: 2b4c2fbfd39effaa
+      serving_endpoint_name: databricks-llama-4-maverick
+    resources:
+      apps:
+        app:
+          name: carepliots
