@@ -69,3 +69,37 @@ body {
 .leaflet-tooltip-top:before {
   border-top-color: #cbd5e1;
 }
+
+/* Genie chat — align with Referral panel (light + indigo) */
+.genie-chat-light [class*='bg-primary'] {
+  border-radius: 1rem;
+  border-bottom-right-radius: 0.125rem;
+}
+
+.genie-chat-light [class*='bg-muted']:not([class*='bg-muted-foreground']) {
+  background-color: #ffffff !important;
+  border: 1px solid #e5e7eb;
+  border-radius: 1rem;
+  border-bottom-left-radius: 0.125rem;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  color: #1f2937;
+}
+
+.genie-chat-light textarea {
+  border-color: #e5e7eb !important;
+  background-color: #ffffff !important;
+}
+
+.genie-chat-light textarea:focus-visible {
+  border-color: #818cf8 !important;
+  box-shadow: 0 0 0 1px #818cf8;
+}
+
+.genie-chat-light div.border-t.shrink-0 > button {
+  background-color: #4f46e5 !important;
+  color: #ffffff !important;
+}
+
+.genie-chat-light div.border-t.shrink-0 > button:hover:not(:disabled) {
+  background-color: #6366f1 !important;
+}
