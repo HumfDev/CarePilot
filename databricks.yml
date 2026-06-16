@@ -1,6 +1,14 @@
 bundle:
   name: carepilot
 
+sync:
+  exclude:
+    - dh_EDA.ipynb.ipynb
+    - node_modules/**
+    - .git/**
+    - client/dist/**
+    - dist/**
+
 variables:
   postgres_branch:
     description: Full Lakebase Postgres branch resource name. Obtain by running `databricks postgres list-branches projects/{project-id}`, select the desired item from the output array and use its .name value.
@@ -23,3 +31,6 @@ resources:
 targets:
   default:
     default: true
+    variables:
+      postgres_branch: projects/carepilot-db/branches/production
+      postgres_database: projects/carepilot-db/branches/production/databases/databricks-postgres
