@@ -1,4 +1,6 @@
+import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { GeniePanel } from '../components/GeniePanel';
+import { IndiaMapPanel } from '../components/IndiaMapPanel';
 
 export function ChatPage() {
   return (
@@ -13,14 +15,16 @@ export function ChatPage() {
         </span>
       </header>
 
-      <main className="flex min-h-0 flex-1 flex-col bg-black">
-        <div className="border-b border-neutral-800 px-8 py-5">
-          <h1 className="text-xl font-semibold text-white">Healthcare Data Queries</h1>
-          <p className="mt-1 text-sm text-neutral-500">
-            Ask questions about facilities, NFHS-5 health indicators, and PIN codes
-          </p>
-        </div>
-        <GeniePanel />
+      <main className="min-h-0 flex-1 bg-black">
+        <PanelGroup direction="horizontal" className="h-full w-full">
+          <Panel defaultSize={55} minSize={30}>
+            <IndiaMapPanel />
+          </Panel>
+          <PanelResizeHandle className="w-1 bg-neutral-800 transition-colors hover:bg-neutral-600" />
+          <Panel defaultSize={45} minSize={30}>
+            <GeniePanel />
+          </Panel>
+        </PanelGroup>
       </main>
     </div>
   );

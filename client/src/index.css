@@ -63,3 +63,28 @@ body {
   background-color: #0a0a0a;
   color: #ffffff;
 }
+
+/* Leaflet dark theme tweaks */
+.leaflet-container {
+  background: #0a0a0a;
+  font-family: inherit;
+}
+
+.leaflet-control-attribution {
+  background: rgba(10, 10, 10, 0.85) !important;
+  color: #a3a3a3 !important;
+}
+
+.leaflet-control-attribution a {
+  color: #007aff !important;
+}
+
+.leaflet-tooltip {
+  background: rgba(23, 23, 23, 0.95);
+  border: 1px solid #404040;
+  color: #ffffff;
+}
+
+.leaflet-tooltip-top:before {
+  border-top-color: #404040;
+}

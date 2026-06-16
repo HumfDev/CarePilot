@@ -1,0 +1,124 @@
+{
+  "facilities": [
+    {
+      "id": "demo-1",
+      "name": "Apollo Clinic Salt Lake",
+      "lat": 22.5875252,
+      "lng": 88.4079038,
+      "city": "Kolkata",
+      "state": "West Bengal"
+    },
+    {
+      "id": "demo-2",
+      "name": "Tulsi Hospital",
+      "lat": 19.1587347,
+      "lng": 77.3076499,
+      "city": "Nanded",
+      "state": "Maharashtra"
+    },
+    {
+      "id": "demo-3",
+      "name": "AIIMS Delhi",
+      "lat": 28.5672,
+      "lng": 77.21,
+      "city": "New Delhi",
+      "state": "Delhi"
+    },
+    {
+      "id": "demo-4",
+      "name": "Tata Memorial Hospital",
+      "lat": 19.0018,
+      "lng": 72.8485,
+      "city": "Mumbai",
+      "state": "Maharashtra"
+    },
+    {
+      "id": "demo-5",
+      "name": "CMC Vellore",
+      "lat": 12.9249,
+      "lng": 79.1358,
+      "city": "Vellore",
+      "state": "Tamil Nadu"
+    },
+    {
+      "id": "demo-6",
+      "name": "NIMHANS Bangalore",
+      "lat": 12.9415,
+      "lng": 77.2456,
+      "city": "Bengaluru",
+      "state": "Karnataka"
+    },
+    {
+      "id": "demo-7",
+      "name": "PGIMER Chandigarh",
+      "lat": 30.7615,
+      "lng": 76.7729,
+      "city": "Chandigarh",
+      "state": "Chandigarh"
+    },
+    {
+      "id": "demo-8",
+      "name": "SGPGI Lucknow",
+      "lat": 26.865,
+      "lng": 80.9115,
+      "city": "Lucknow",
+      "state": "Uttar Pradesh"
+    },
+    {
+      "id": "demo-9",
+      "name": "JIPMER Puducherry",
+      "lat": 11.956,
+      "lng": 79.804,
+      "city": "Puducherry",
+      "state": "Puducherry"
+    },
+    {
+      "id": "demo-10",
+      "name": "KIMS Hyderabad",
+      "lat": 17.385,
+      "lng": 78.4867,
+      "city": "Hyderabad",
+      "state": "Telangana"
+    },
+    {
+      "id": "demo-11",
+      "name": "SCTIMST Trivandrum",
+      "lat": 8.5241,
+      "lng": 76.9366,
+      "city": "Thiruvananthapuram",
+      "state": "Kerala"
+    },
+    {
+      "id": "demo-12",
+      "name": "SMS Hospital Jaipur",
+      "lat": 26.9124,
+      "lng": 75.7873,
+      "city": "Jaipur",
+      "state": "Rajasthan"
+    },
+    {
+      "id": "demo-13",
+      "name": "GMCH Guwahati",
+      "lat": 26.1445,
+      "lng": 91.7362,
+      "city": "Guwahati",
+      "state": "Assam"
+    },
+    {
+      "id": "demo-14",
+      "name": "IGIMS Patna",
+      "lat": 25.5941,
+      "lng": 85.1376,
+      "city": "Patna",
+      "state": "Bihar"
+    },
+    {
+      "id": "demo-15",
+      "name": "KGMU Lucknow",
+      "lat": 26.8467,
+      "lng": 80.9462,
+      "city": "Lucknow",
+      "state": "Uttar Pradesh"
+    }
+  ]
+}

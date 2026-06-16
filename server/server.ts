@@ -1,5 +1,6 @@
 import { createApp, server, lakebase, genie } from '@databricks/appkit';
 import { setupHealthcareLakebase } from './lib/lakebase-setup';
+import { setupMapRoutes } from './routes/map-routes';
 
 const GENIE_HEALTHCARE_SPACE_ID =
   process.env.DATABRICKS_GENIE_SPACE_ID ?? '01f16954e5791df78bb099133a0041be';
@@ -16,5 +17,6 @@ createApp({
   ],
   async onPluginsReady(appkit) {
     await setupHealthcareLakebase(appkit);
+    setupMapRoutes(appkit);
   },
 }).catch(console.error);
