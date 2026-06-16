@@ -4,3 +4,5 @@ env:
     valueFrom: postgres
   - name: DATABRICKS_ENDPOINT
     value: 'databricks-gpt-5-4-mini'
+  - name: DATABRICKS_GENIE_SPACE_ID
+    valueFrom: genie-space

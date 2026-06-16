@@ -4,6 +4,9 @@ import { Streamdown } from 'streamdown';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { MessageSquarePlus, Trash2 } from 'lucide-react';
 import { Button, ScrollArea, Textarea } from '@databricks/appkit-ui/react';
+import { GeniePanel } from '../components/GeniePanel';
+
+type ChatMode = 'assistant' | 'data';
 
 interface ChatSession {
   id: string;
@@ -57,7 +60,33 @@ function getMessageText(message: { parts?: unknown[]; content?: string }): strin
     .join('');
 }
 
+function ModeToggle({ mode, onChange }: { mode: ChatMode; onChange: (m: ChatMode) => void }) {
+  return (
+    <div className="flex rounded-md border border-neutral-700 p-0.5">
+      <button
+        type="button"
+        onClick={() => onChange('assistant')}
+        className={`rounded px-3 py-1 text-xs font-medium transition-colors ${
+          mode === 'assistant' ? 'bg-neutral-800 text-white' : 'text-neutral-500 hover:text-neutral-300'
+        }`}
+      >
+        AI Assistant
+      </button>
+      <button
+        type="button"
+        onClick={() => onChange('data')}
+        className={`rounded px-3 py-1 text-xs font-medium transition-colors ${
+          mode === 'data' ? 'bg-neutral-800 text-white' : 'text-neutral-500 hover:text-neutral-300'
+        }`}
+      >
+        Data Queries
+      </button>
+    </div>
+  );
+}
+
 export function ChatPage() {
+  const [mode, setMode] = useState<ChatMode>('data');
   const [chatId, setChatId] = useState<string | null>(null);
   const chatIdRef = useRef<string | null>(null);
   const chatLoadTokenRef = useRef(0);
@@ -203,170 +232,187 @@ export function ChatPage() {
 
   return (
     <div className="flex h-screen flex-col bg-black text-white">
-      {/* Top navigation bar */}
       <header className="flex shrink-0 items-center justify-between border-b border-neutral-800 bg-black px-6 py-3">
-        <div className="flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full bg-red-600" aria-hidden="true" />
-          <span className="text-sm font-medium text-white">CarePilot AI Assistant</span>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-red-600" aria-hidden="true" />
+            <span className="text-sm font-medium text-white">CarePilot AI Assistant</span>
+          </div>
+          <ModeToggle mode={mode} onChange={setMode} />
         </div>
         <span className="text-[10px] font-medium uppercase tracking-widest text-neutral-500">
-          Streaming · Lakebase Memory
+          {mode === 'data' ? 'Genie · Unity Catalog' : 'Streaming · Lakebase Memory'}
         </span>
       </header>
 
       <div className="flex min-h-0 flex-1">
-        {/* Sidebar */}
-        <aside className="flex w-72 shrink-0 flex-col border-r border-neutral-800 bg-neutral-950">
-          <div className="px-4 py-4">
-            <h2 className="text-sm font-semibold text-white">Conversations</h2>
-          </div>
-          <div className="px-4 pb-3">
-            <Button
-              variant="outline"
-              className="w-full justify-start gap-2 border-neutral-700 bg-transparent text-neutral-300 hover:bg-neutral-900 hover:text-white"
-              onClick={startNewChat}
-            >
-              <MessageSquarePlus className="h-4 w-4" />
-              New Chat
-            </Button>
-          </div>
-          <ScrollArea ref={sidebarScrollAreaRef} className="min-h-0 flex-1">
-            <div className="space-y-0.5 px-2 pb-4">
-              {chats.map((chat) => (
-                <div
-                  key={chat.id}
-                  className={`group flex items-center gap-1 overflow-hidden rounded-md transition-colors ${
-                    chatId === chat.id ? 'bg-neutral-800' : 'hover:bg-neutral-900'
-                  }`}
-                >
-                  <button
-                    onClick={() => selectChat(chat.id)}
-                    className="flex min-w-0 flex-1 flex-col gap-0.5 px-3 py-2.5 text-left"
-                  >
-                    <span
-                      className={`truncate text-sm ${chatId === chat.id ? 'font-medium text-white' : 'text-neutral-200'}`}
-                    >
-                      {chat.title}
-                    </span>
-                    <span className="text-xs text-neutral-500">
-                      {formatRelativeDate(chat.updated_at)} · {chat.message_count} message
-                      {chat.message_count !== 1 ? 's' : ''}
-                    </span>
-                  </button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    aria-label="Delete chat"
-                    title="Delete chat"
-                    className="mr-1 h-7 w-7 shrink-0 p-0 text-neutral-600 opacity-0 hover:bg-neutral-700 hover:text-neutral-300 group-hover:opacity-100"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (window.confirm(`Delete "${chat.title}"? This cannot be undone.`)) void deleteChat(chat.id);
-                    }}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              ))}
-              {chats.length === 0 && (
-                <p className="px-3 py-6 text-center text-xs text-neutral-600">No previous conversations</p>
-              )}
+        {mode === 'assistant' && (
+          <aside className="flex w-72 shrink-0 flex-col border-r border-neutral-800 bg-neutral-950">
+            <div className="px-4 py-4">
+              <h2 className="text-sm font-semibold text-white">Conversations</h2>
             </div>
-          </ScrollArea>
-        </aside>
+            <div className="px-4 pb-3">
+              <Button
+                variant="outline"
+                className="w-full justify-start gap-2 border-neutral-700 bg-transparent text-neutral-300 hover:bg-neutral-900 hover:text-white"
+                onClick={startNewChat}
+              >
+                <MessageSquarePlus className="h-4 w-4" />
+                New Chat
+              </Button>
+            </div>
+            <ScrollArea ref={sidebarScrollAreaRef} className="min-h-0 flex-1">
+              <div className="space-y-0.5 px-2 pb-4">
+                {chats.map((chat) => (
+                  <div
+                    key={chat.id}
+                    className={`group flex items-center gap-1 overflow-hidden rounded-md transition-colors ${
+                      chatId === chat.id ? 'bg-neutral-800' : 'hover:bg-neutral-900'
+                    }`}
+                  >
+                    <button
+                      onClick={() => selectChat(chat.id)}
+                      className="flex min-w-0 flex-1 flex-col gap-0.5 px-3 py-2.5 text-left"
+                    >
+                      <span
+                        className={`truncate text-sm ${chatId === chat.id ? 'font-medium text-white' : 'text-neutral-200'}`}
+                      >
+                        {chat.title}
+                      </span>
+                      <span className="text-xs text-neutral-500">
+                        {formatRelativeDate(chat.updated_at)} · {chat.message_count} message
+                        {chat.message_count !== 1 ? 's' : ''}
+                      </span>
+                    </button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      aria-label="Delete chat"
+                      title="Delete chat"
+                      className="mr-1 h-7 w-7 shrink-0 p-0 text-neutral-600 opacity-0 hover:bg-neutral-700 hover:text-neutral-300 group-hover:opacity-100"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (window.confirm(`Delete "${chat.title}"? This cannot be undone.`))
+                          void deleteChat(chat.id);
+                      }}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                ))}
+                {chats.length === 0 && (
+                  <p className="px-3 py-6 text-center text-xs text-neutral-600">No previous conversations</p>
+                )}
+              </div>
+            </ScrollArea>
+          </aside>
+        )}
 
-        {/* Main chat area */}
         <main className="flex min-w-0 flex-1 flex-col bg-black">
-          {/* Chat header */}
           <div className="border-b border-neutral-800 px-8 py-5">
             <h1 className="text-xl font-semibold text-white">
-              {activeChat?.title ?? 'New conversation'}
+              {mode === 'data'
+                ? 'Healthcare Data Queries'
+                : (activeChat?.title ?? 'New conversation')}
             </h1>
             <p className="mt-1 text-sm text-neutral-500">
-              {MODEL_NAME}
-              {messageCount > 0 && ` · ${messageCount} message${messageCount !== 1 ? 's' : ''}`}
-              {' · backed by Lakebase Postgres'}
+              {mode === 'data' ? (
+                <>
+                  Genie · facilities, NFHS-5 indicators, PIN codes · Unity Catalog
+                </>
+              ) : (
+                <>
+                  {MODEL_NAME}
+                  {messageCount > 0 && ` · ${messageCount} message${messageCount !== 1 ? 's' : ''}`}
+                  {' · backed by Lakebase Postgres'}
+                </>
+              )}
             </p>
           </div>
 
-          {/* Messages */}
-          <ScrollArea ref={scrollAreaRef} className="min-h-0 flex-1">
-            <div className="mx-auto max-w-3xl space-y-6 px-8 py-6">
-              {messages.length === 0 && (
-                <div className="flex flex-col items-center justify-center py-24 text-center">
-                  <p className="text-base font-medium text-neutral-300">Start a conversation</p>
-                  <p className="mt-2 max-w-md text-sm text-neutral-600">
-                    Send a message to begin. Responses stream token-by-token and are persisted in Lakebase.
-                  </p>
-                </div>
-              )}
-              {messages.map((message) => {
-                const isUser = message.role === 'user';
-                const timestamp = formatTimestamp(
-                  'createdAt' in message ? (message.createdAt as Date | undefined) : undefined
-                );
-                const text = getMessageText(message);
-
-                return (
-                  <div
-                    key={message.id}
-                    className={`flex flex-col gap-1.5 ${isUser ? 'items-end' : 'items-start'}`}
-                  >
-                    <div
-                      className={`max-w-[85%] rounded-lg px-4 py-3 text-sm leading-relaxed ${
-                        isUser
-                          ? 'bg-white text-black'
-                          : 'bg-neutral-800 text-neutral-100 [&_pre]:my-2 [&_pre]:overflow-x-auto [&_pre]:rounded [&_pre]:bg-neutral-900 [&_pre]:p-3 [&_pre]:font-mono [&_pre]:text-xs [&_code]:font-mono [&_code]:text-xs'
-                      }`}
-                    >
-                      {isUser ? (
-                        <p className="whitespace-pre-wrap">{text}</p>
-                      ) : (
-                        <Streamdown animated={status === 'streaming'} className="text-sm">
-                          {text}
-                        </Streamdown>
-                      )}
+          {mode === 'data' ? (
+            <GeniePanel />
+          ) : (
+            <>
+              <ScrollArea ref={scrollAreaRef} className="min-h-0 flex-1">
+                <div className="mx-auto max-w-3xl space-y-6 px-8 py-6">
+                  {messages.length === 0 && (
+                    <div className="flex flex-col items-center justify-center py-24 text-center">
+                      <p className="text-base font-medium text-neutral-300">Start a conversation</p>
+                      <p className="mt-2 max-w-md text-sm text-neutral-600">
+                        General AI assistant powered by Model Serving. Switch to Data Queries for
+                        questions about your healthcare database.
+                      </p>
                     </div>
-                    <span className="text-xs text-neutral-600">
-                      {isUser ? 'You' : 'Assistant'}
-                      {timestamp && ` · ${timestamp}`}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </ScrollArea>
+                  )}
+                  {messages.map((message) => {
+                    const isUser = message.role === 'user';
+                    const timestamp = formatTimestamp(
+                      'createdAt' in message ? (message.createdAt as Date | undefined) : undefined
+                    );
+                    const text = getMessageText(message);
 
-          {/* Input */}
-          <div className="border-t border-neutral-800 px-8 py-4">
-            <form className="mx-auto flex max-w-3xl items-end gap-3" onSubmit={handleSubmit}>
-              <Textarea
-                ref={inputRef}
-                value={input}
-                onChange={(e) => {
-                  setInput(e.target.value);
-                  autosize();
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSubmit(e);
-                  }
-                }}
-                placeholder="Send a message..."
-                autoFocus
-                rows={1}
-                className="max-h-[200px] min-h-[44px] resize-none border-neutral-700 bg-neutral-900 text-white placeholder:text-neutral-600 focus-visible:ring-neutral-600"
-              />
-              <Button
-                type="submit"
-                disabled={status !== 'ready' || !input.trim()}
-                className="shrink-0 bg-white text-black hover:bg-neutral-200 disabled:bg-neutral-800 disabled:text-neutral-600"
-              >
-                {status === 'submitted' || status === 'streaming' ? 'Sending' : 'Send'}
-              </Button>
-            </form>
-          </div>
+                    return (
+                      <div
+                        key={message.id}
+                        className={`flex flex-col gap-1.5 ${isUser ? 'items-end' : 'items-start'}`}
+                      >
+                        <div
+                          className={`max-w-[85%] rounded-lg px-4 py-3 text-sm leading-relaxed ${
+                            isUser
+                              ? 'bg-white text-black'
+                              : 'bg-neutral-800 text-neutral-100 [&_pre]:my-2 [&_pre]:overflow-x-auto [&_pre]:rounded [&_pre]:bg-neutral-900 [&_pre]:p-3 [&_pre]:font-mono [&_pre]:text-xs [&_code]:font-mono [&_code]:text-xs'
+                          }`}
+                        >
+                          {isUser ? (
+                            <p className="whitespace-pre-wrap">{text}</p>
+                          ) : (
+                            <Streamdown animated={status === 'streaming'} className="text-sm">
+                              {text}
+                            </Streamdown>
+                          )}
+                        </div>
+                        <span className="text-xs text-neutral-600">
+                          {isUser ? 'You' : 'Assistant'}
+                          {timestamp && ` · ${timestamp}`}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+
+              <div className="border-t border-neutral-800 px-8 py-4">
+                <form className="mx-auto flex max-w-3xl items-end gap-3" onSubmit={handleSubmit}>
+                  <Textarea
+                    ref={inputRef}
+                    value={input}
+                    onChange={(e) => {
+                      setInput(e.target.value);
+                      autosize();
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSubmit(e);
+                      }
+                    }}
+                    placeholder="Send a message..."
+                    autoFocus
+                    rows={1}
+                    className="max-h-[200px] min-h-[44px] resize-none border-neutral-700 bg-neutral-900 text-white placeholder:text-neutral-600 focus-visible:ring-neutral-600"
+                  />
+                  <Button
+                    type="submit"
+                    disabled={status !== 'ready' || !input.trim()}
+                    className="shrink-0 bg-white text-black hover:bg-neutral-200 disabled:bg-neutral-800 disabled:text-neutral-600"
+                  >
+                    {status === 'submitted' || status === 'streaming' ? 'Sending' : 'Send'}
+                  </Button>
+                </form>
+              </div>
+            </>
+          )}
         </main>
       </div>
     </div>

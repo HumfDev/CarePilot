@@ -14,12 +14,18 @@ variables:
     description: Full Lakebase Postgres branch resource name. Obtain by running `databricks postgres list-branches projects/{project-id}`, select the desired item from the output array and use its .name value.
   postgres_database:
     description: Full Lakebase Postgres database resource name. Obtain by running `databricks postgres list-databases {branch-name}`, select the desired item from the output array and use its .name value. Requires the branch resource name.
+  genie_space_id:
+    description: CarePilot Genie space ID for healthcare data queries
+  genie_space_name:
+    description: CarePilot Genie space display name
 
 resources:
   apps:
     app:
       name: 'carepilot'
       description: 'Streaming AI chat with Model Serving and Lakebase-persisted chat history'
+      user_api_scopes:
+        - dashboards.genie
       source_code_path: ./
       resources:
         - name: postgres
@@ -27,6 +33,11 @@ resources:
             branch: ${var.postgres_branch}
             database: ${var.postgres_database}
             permission: CAN_CONNECT_AND_CREATE
+        - name: genie-space
+          genie_space:
+            name: ${var.genie_space_name}
+            space_id: ${var.genie_space_id}
+            permission: CAN_RUN
 
 targets:
   default:
@@ -34,3 +45,5 @@ targets:
     variables:
       postgres_branch: projects/carepilot-db/branches/production
       postgres_database: projects/carepilot-db/branches/production/databases/databricks-postgres
+      genie_space_id: 01f16954e5791df78bb099133a0041be
+      genie_space_name: CarePilot Healthcare Data
