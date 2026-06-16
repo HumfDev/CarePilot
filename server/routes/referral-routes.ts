@@ -9,6 +9,89 @@
 import type { Application, Request, Response } from 'express';
 import { callPythonBridge } from '../lib/python-bridge';
 
+// ---------------------------------------------------------------------------
+// Urgency assessment via Databricks Foundation Models
+// ---------------------------------------------------------------------------
+
+interface UrgencyResult {
+  urgency_score: number;
+  urgency_label: string;
+  department: string;
+}
+
+const URGENCY_FALLBACK: UrgencyResult = { urgency_score: 5, urgency_label: 'Routine', department: '' };
+
+function extractUrgencyJSON(raw: string): { urgency_score: unknown; urgency_label: unknown; department: unknown } {
+  // Strip markdown fences (```json ... ``` or ``` ... ```)
+  const stripped = raw.replace(/```(?:json)?\s*([\s\S]*?)```/g, '$1').trim();
+  // Find first {...} block in case model adds surrounding prose
+  const match = stripped.match(/\{[\s\S]*\}/);
+  const jsonStr = match ? match[0] : stripped;
+  const obj = JSON.parse(jsonStr) as Record<string, unknown>;
+  return { urgency_score: obj.urgency_score, urgency_label: obj.urgency_label, department: obj.department };
+}
+
+async function assessUrgency(message: string, careNeed: string): Promise<UrgencyResult> {
+  try {
+    const host = process.env.DATABRICKS_HOST;
+    const token = process.env.DATABRICKS_TOKEN;
+    if (!host || !token) {
+      console.warn('[urgency] credentials missing, using fallback');
+      console.log('[urgency]', { query: message, ...URGENCY_FALLBACK, fallback: true });
+      return URGENCY_FALLBACK;
+    }
+
+    const systemPrompt =
+      'You are a medical triage assistant. Based on the patient\'s described need, assess urgency 1-10 and identify the primary medical department/specialty.\n\n' +
+      'Urgency scale:\n' +
+      '- 9-10: Life-threatening emergency (cardiac arrest, stroke, severe trauma, difficulty breathing)\n' +
+      '- 7-8: Urgent (acute pain, sudden vision loss, high fever, uncontrolled bleeding)\n' +
+      '- 5-6: Semi-urgent (needs care within days, worsening chronic condition)\n' +
+      '- 3-4: Routine with concern (check-up for a specific condition, stable chronic care)\n' +
+      '- 1-2: Preventive/routine (wellness check, prescription renewal)\n\n' +
+      'Respond ONLY with a JSON object, no other text:\n' +
+      '{"urgency_score":<integer 1-10>,"urgency_label":"<Emergency|Urgent|Semi-urgent|Routine>","department":"<e.g. Nephrology>","reasoning":"<one sentence>"}';
+
+    const resp = await fetch(`${host}/serving-endpoints/databricks-llama-4-maverick/invocations`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `Patient input: "${message}"\nInferred condition: "${careNeed}"` },
+        ],
+        max_tokens: 200,
+        temperature: 0,
+      }),
+      signal: AbortSignal.timeout(10_000),
+    });
+
+    if (!resp.ok) {
+      throw new Error(`LLM returned HTTP ${resp.status}`);
+    }
+
+    const data = (await resp.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    const raw = data?.choices?.[0]?.message?.content ?? '';
+    const parsed = extractUrgencyJSON(raw);
+
+    const score = Math.round(Math.max(1, Math.min(10, Number(parsed.urgency_score))));
+    if (!Number.isFinite(score)) throw new Error('urgency_score not finite');
+
+    const result: UrgencyResult = {
+      urgency_score: score,
+      urgency_label: typeof parsed.urgency_label === 'string' ? parsed.urgency_label : 'Routine',
+      department: typeof parsed.department === 'string' ? parsed.department : '',
+    };
+
+    console.log('[urgency]', { query: message, ...result, fallback: false });
+    return result;
+  } catch (err) {
+    console.warn('[urgency] assessment failed, using fallback:', err instanceof Error ? err.message : String(err));
+    console.log('[urgency]', { query: message, ...URGENCY_FALLBACK, fallback: true });
+    return URGENCY_FALLBACK;
+  }
+}
+
 interface AppKitWithServer {
   server: { extend(fn: (app: Application) => void): void };
 }
@@ -50,7 +133,7 @@ async function callBridge(res: Response, op: Parameters<typeof callPythonBridge>
 
 export function setupReferralRoutes(appkit: AppKitWithServer) {
   appkit.server.extend((app) => {
-    // POST /api/referral/parse  — NL → structured search params
+    // POST /api/referral/parse  — NL → structured search params + urgency assessment
     app.post('/api/referral/parse', async (req: Request, res: Response) => {
       const body = isRecord(req.body) ? req.body : {};
       const message = typeof body.message === 'string' ? body.message : '';
@@ -58,7 +141,25 @@ export function setupReferralRoutes(appkit: AppKitWithServer) {
         badRequest(res, '`message` is required.');
         return;
       }
-      await callBridge(res, 'parse', { message });
+      try {
+        const result = await callPythonBridge('parse', { message });
+        if (!result.ok) {
+          if (result.kind === 'needs_clarification' || result.kind === 'empty_message') {
+            res.status(200).json(result);
+          } else {
+            res.status(result.kind === 'missing_params' || result.kind === 'bad_request' ? 400 : 500).json(result);
+          }
+          return;
+        }
+        // Urgency assessment — runs after parse succeeds; never blocks the response
+        const careNeed = typeof result.care_need === 'string' ? result.care_need : '';
+        const urgency = await assessUrgency(message, careNeed);
+        res.json({ ...result, ...urgency });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error('[referral_routes] parse failed:', msg);
+        res.status(502).json({ ok: false, kind: 'bridge_error', error: msg });
+      }
     });
 
     // POST /api/referral/search — run the scoring pipeline
@@ -73,6 +174,7 @@ export function setupReferralRoutes(appkit: AppKitWithServer) {
         return;
       }
 
+      const urgencyScore = asNumberOrNull(body.urgency_score);
       const payload = {
         care_need,
         care_type: typeof body.care_type === 'string' ? body.care_type : 'specialist',
@@ -82,6 +184,8 @@ export function setupReferralRoutes(appkit: AppKitWithServer) {
         max_distance_km: asNumberOrNull(body.max_distance_km) ?? 75,
         top_n: asNumberOrNull(body.top_n) ?? 10,
         use_feedback_reranking: body.use_feedback_reranking !== false,
+        // Optional — if missing, Python bridge uses original pipeline ranking unchanged
+        ...(urgencyScore != null ? { urgency_score: urgencyScore } : {}),
       };
 
       await callBridge(res, 'search', payload);

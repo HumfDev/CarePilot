@@ -23,6 +23,38 @@ const DEFAULT_EXAMPLES = [
   'cardiology near Mumbai',
 ];
 
+function UrgencyBadge({
+  urgency_score,
+  urgency_label,
+  department,
+}: {
+  urgency_score?: number;
+  urgency_label?: string;
+  department?: string;
+}) {
+  if (urgency_score == null) return null;
+
+  const color =
+    urgency_score >= 8
+      ? 'border-rose-500/40 bg-rose-500/10 text-rose-300'
+      : urgency_score >= 5
+        ? 'border-amber-500/40 bg-amber-500/10 text-amber-300'
+        : 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300';
+
+  const dot =
+    urgency_score >= 8 ? 'bg-rose-400' : urgency_score >= 5 ? 'bg-amber-400' : 'bg-emerald-400';
+
+  return (
+    <div className={`flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs ${color}`}>
+      <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dot}`} />
+      <span className="font-medium">
+        Urgency {urgency_score}/10 · {urgency_label ?? 'Routine'}
+      </span>
+      {department ? <span className="text-neutral-400">· {department}</span> : null}
+    </div>
+  );
+}
+
 function MessageBubble({ message }: { message: ChatMessage }) {
   if (message.role === 'user') {
     return (
@@ -70,6 +102,12 @@ export function ReferralChatPanel({ referral, exampleQueries }: ReferralChatPane
           Genie).
         </p>
       </div>
+
+      {referral.urgencyInfo && (
+        <div className="shrink-0 px-4 pt-2 pb-1">
+          <UrgencyBadge {...referral.urgencyInfo} />
+        </div>
+      )}
 
       <div ref={scrollRef} className="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 py-4">
         {referral.messages.map((m) => (

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import logo from '../assets/carepilot_icon.png';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { IndiaMapPanel } from '../components/IndiaMapPanel';
 import { ReferralChatPanel } from '../components/ReferralChatPanel';
@@ -45,7 +46,7 @@ export function ChatPage() {
     <div className="flex h-screen flex-col bg-black text-white">
       <header className="flex shrink-0 items-center justify-between border-b border-neutral-800 bg-black px-6 py-3">
         <div className="flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full bg-red-600" aria-hidden="true" />
+          <img src={logo} alt="CarePilot" className="h-7 w-7" />
           <span className="text-sm font-medium text-white">CarePilot Referral Copilot</span>
         </div>
         <span className="text-[10px] font-medium uppercase tracking-widest text-neutral-500">

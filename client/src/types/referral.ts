@@ -21,6 +21,8 @@ export interface ReferralSearchParams {
   ranking_priority: string;
   max_distance_km: number;
   top_n: number;
+  /** LLM-assessed urgency (1–10). Optional — if absent, pipeline ranking is unchanged. */
+  urgency_score?: number;
 }
 
 export interface EvidenceSnippet {
@@ -107,6 +109,12 @@ export interface ReferralParseResponseOk {
   max_distance_km: number;
   top_n: number;
   needs_clarification: null;
+  /** LLM-assessed urgency score 1–10. Display hint only — does not filter or route candidates. */
+  urgency_score?: number;
+  /** Human-readable urgency label (Emergency / Urgent / Semi-urgent / Routine). */
+  urgency_label?: string;
+  /** Inferred primary medical department (e.g. "Nephrology"). Display hint only. */
+  department?: string;
 }
 
 export interface ReferralParseResponseClarify {
