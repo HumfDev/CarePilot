@@ -7,8 +7,7 @@ interface AppKitWithLakebase {
 const UC_HEALTHCARE_TABLES = [
   {
     table_name: 'facilities',
-    unity_catalog_table:
-      'databricks_virtue_foundation_dataset_dais_2026.virtue_foundation_dataset.facilities',
+    unity_catalog_table: 'databricks_virtue_foundation_dataset_dais_2026.virtue_foundation_dataset.facilities',
     description: 'Healthcare facilities (names, locations, specialties, capacity)',
   },
   {
@@ -22,6 +21,12 @@ const UC_HEALTHCARE_TABLES = [
     unity_catalog_table:
       'databricks_virtue_foundation_dataset_dais_2026.virtue_foundation_dataset.nfhs_5_district_health_indicators',
     description: 'NFHS-5 district-level health and demographic indicators',
+  },
+  {
+    table_name: 'facility_features_v4',
+    unity_catalog_table: 'workspace.default.facility_feature_table_v4',
+    description:
+      'v4 cleaned + scored facilities — trust_score_v2 + 5 component scores + NFHS join. Built by facility_feature_pipeline_v4. See docs/v4-scoring-integration.md for the Lakebase sync setup; the map route LEFT-JOINs this table so the app degrades gracefully if it is not yet synced.',
   },
 ] as const;
 
@@ -46,7 +51,7 @@ export async function setupHealthcareLakebase(appkit: AppKitWithLakebase) {
        SET unity_catalog_table = EXCLUDED.unity_catalog_table,
            description = EXCLUDED.description,
            updated_at = NOW()`,
-      [row.table_name, row.unity_catalog_table, row.description],
+      [row.table_name, row.unity_catalog_table, row.description]
     );
   }
 }
