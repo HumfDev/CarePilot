@@ -25,7 +25,7 @@
     "sync:bundle-vars": "node scripts/sync-bundle-vars.mjs",
     "discover:hackathon": "node scripts/discover-hackathon.mjs",
     "deploy": "npm run sync:bundle-vars && databricks bundle deploy && databricks bundle run app",
-    "deploy:dbc-7bc68df0-b635": "databricks bundle deploy --target dbc-7bc68df0-b635 --profile dbc-7bc68df0-b635 --auto-approve && databricks apps deploy carepilot --profile dbc-7bc68df0-b635 --json '{\"git_source\": {\"branch\": \"main\"}}' --auto-approve",
+    "deploy:dbc-7bc68df0-b635": "databricks bundle deploy --target dbc-7bc68df0-b635 --profile dbc-7bc68df0-b635 --auto-approve && databricks bundle run app --target dbc-7bc68df0-b635 --profile dbc-7bc68df0-b635",
     "deploy:hackathon": "npm run build && databricks bundle deploy --target hackathon --profile hackathon && databricks apps deploy carepliots --profile hackathon --auto-approve",
     "test": "vitest run",
     "test:watch": "vitest",

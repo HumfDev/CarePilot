@@ -33,7 +33,6 @@ resources:
         - dashboards.genie
         - sql
         - postgres
-      source_code_path: ./
       resources:
         - name: postgres
           postgres:
@@ -64,6 +63,10 @@ targets:
       genie_space_name: CarePilot Healthcare Data
       sql_warehouse_id: b2bb07abff382b79
       serving_endpoint_name: databricks-llama-4-maverick
+    resources:
+      apps:
+        app:
+          source_code_path: ./
 
   # Workspace dbc-7bc68df0-b635 (7474654406105854).
   # Git-backed app: HumfDev/CarePilot main
@@ -77,6 +80,14 @@ targets:
       genie_space_name: CarePilot Healthcare Data
       sql_warehouse_id: 408db4b626251ac3
       serving_endpoint_name: databricks-llama-4-maverick
+    resources:
+      apps:
+        app:
+          git_repository:
+            url: https://github.com/HumfDev/CarePilot
+            provider: gitHub
+          git_source:
+            branch: main
 
   # Hackathon / carepliots workspace (736467640869366).
   # Set profile: export DATABRICKS_CONFIG_PROFILE=hackathon
@@ -94,3 +105,4 @@ targets:
       apps:
         app:
           name: carepliots
+          source_code_path: ./
