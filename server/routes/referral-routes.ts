@@ -20,9 +20,12 @@ import { parseReferralMessage } from '../lib/referral-parse';
 import {
   answerReferralFollowUp,
   classifyReferralIntent,
+  referralSummarizerLabel,
   summarizeCandidateCard,
   summarizeSearchResults,
+  type ReferralLlmContext,
 } from '../lib/referral-llm';
+import { type GenieReferralClient } from '../lib/referral-genie';
 import { isGenieEnabled, useLakebaseReferral, usePythonBridge } from '../lib/runtime-config';
 
 interface LakebaseQueryable {
@@ -32,6 +35,7 @@ interface LakebaseQueryable {
 interface AppKitWithReferral {
   server: { extend(fn: (app: Application) => void): void };
   lakebase?: LakebaseQueryable;
+  genie?: GenieReferralClient;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -72,6 +76,8 @@ async function callBridge(res: Response, op: Parameters<typeof callPythonBridge>
 }
 
 export function setupReferralRoutes(appkit: AppKitWithReferral) {
+  const llmCtx: ReferralLlmContext = { genie: appkit.genie ?? null };
+
   appkit.server.extend((app) => {
     app.get('/api/referral/status', async (_req, res) => {
       let data_ready = false;
@@ -86,6 +92,7 @@ export function setupReferralRoutes(appkit: AppKitWithReferral) {
       res.json({
         ok: true,
         engine: lakebaseReady(appkit) ? 'lakebase_sql' : usePythonBridge() ? 'python_bridge' : 'unconfigured',
+        summarizer: referralSummarizerLabel(),
         genie_enabled: isGenieEnabled(),
         local_demo: process.env.CAREPILOT_LOCAL_DEMO === '1',
         data_ready,
@@ -283,14 +290,24 @@ export function setupReferralRoutes(appkit: AppKitWithReferral) {
         return;
       }
       try {
-        const result = await summarizeCandidateCard(lakebaseReady(appkit) ? appkit.lakebase : null, {
-          scenario_id: String(body.scenario_id),
-          candidate: body.candidate as ReferralCandidate,
-          care_need: String(body.care_need),
-          care_type: typeof body.care_type === 'string' ? body.care_type : undefined,
-          model: typeof body.model === 'string' ? body.model : undefined,
+        const result = await summarizeCandidateCard(
+          lakebaseReady(appkit) ? appkit.lakebase : null,
+          {
+            scenario_id: String(body.scenario_id),
+            candidate: body.candidate as ReferralCandidate,
+            care_need: String(body.care_need),
+            care_type: typeof body.care_type === 'string' ? body.care_type : undefined,
+            model: typeof body.model === 'string' ? body.model : undefined,
+          },
+          llmCtx
+        );
+        res.json({
+          ok: true,
+          summary: result.summary,
+          model: result.model,
+          engine: result.engine,
+          cached: result.cached,
         });
-        res.json({ ok: true, summary: result.summary, model: result.model, cached: result.cached });
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         res.status(502).json({ ok: false, kind: 'llm_error', error: message });
@@ -304,15 +321,18 @@ export function setupReferralRoutes(appkit: AppKitWithReferral) {
         return;
       }
       try {
-        const summary = await summarizeSearchResults({
-          care_need: String(body.care_need),
-          care_type: typeof body.care_type === 'string' ? body.care_type : undefined,
-          location_text: typeof body.location_text === 'string' ? body.location_text : null,
-          candidates: body.candidates as ReferralCandidate[],
-          feedback_applied: Boolean(body.feedback_applied),
-          model: typeof body.model === 'string' ? body.model : undefined,
-        });
-        res.json({ ok: true, summary });
+        const result = await summarizeSearchResults(
+          {
+            care_need: String(body.care_need),
+            care_type: typeof body.care_type === 'string' ? body.care_type : undefined,
+            location_text: typeof body.location_text === 'string' ? body.location_text : null,
+            candidates: body.candidates as ReferralCandidate[],
+            feedback_applied: Boolean(body.feedback_applied),
+            model: typeof body.model === 'string' ? body.model : undefined,
+          },
+          llmCtx
+        );
+        res.json({ ok: true, summary: result.summary, engine: result.engine, model: result.model });
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         res.status(502).json({ ok: false, kind: 'llm_error', error: message });
@@ -327,14 +347,17 @@ export function setupReferralRoutes(appkit: AppKitWithReferral) {
         return;
       }
       try {
-        const reply = await answerReferralFollowUp({
-          message,
-          care_need: String(body.care_need),
-          candidates: body.candidates as ReferralCandidate[],
-          feedback_applied: Boolean(body.feedback_applied),
-          model: typeof body.model === 'string' ? body.model : undefined,
-        });
-        res.json({ ok: true, reply });
+        const result = await answerReferralFollowUp(
+          {
+            message,
+            care_need: String(body.care_need),
+            candidates: body.candidates as ReferralCandidate[],
+            feedback_applied: Boolean(body.feedback_applied),
+            model: typeof body.model === 'string' ? body.model : undefined,
+          },
+          llmCtx
+        );
+        res.json({ ok: true, reply: result.reply, engine: result.engine, model: result.model });
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         res.status(502).json({ ok: false, kind: 'llm_error', error: message });
@@ -349,14 +372,17 @@ export function setupReferralRoutes(appkit: AppKitWithReferral) {
         return;
       }
       try {
-        const intent = await classifyReferralIntent({
-          message,
-          care_need: String(body.care_need ?? ''),
-          candidate_count: Number(body.candidate_count ?? 0),
-          top_facility_name:
-            typeof body.top_facility_name === 'string' ? body.top_facility_name : undefined,
-          model: typeof body.model === 'string' ? body.model : undefined,
-        });
+        const intent = await classifyReferralIntent(
+          {
+            message,
+            care_need: String(body.care_need ?? ''),
+            candidate_count: Number(body.candidate_count ?? 0),
+            top_facility_name:
+              typeof body.top_facility_name === 'string' ? body.top_facility_name : undefined,
+            model: typeof body.model === 'string' ? body.model : undefined,
+          },
+          llmCtx
+        );
         res.json({ ok: true, intent });
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);

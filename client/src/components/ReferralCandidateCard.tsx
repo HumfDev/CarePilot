@@ -19,7 +19,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReferralCandidate, ReviewDecision } from '../types/referral';
-import { DEFAULT_LLM_MODEL } from '../hooks/useReferralSearch';
+import { DEFAULT_SUMMARIZER_LABEL } from '../hooks/useReferralSearch';
 
 interface ReferralCandidateCardProps {
   candidate: ReferralCandidate | null;
@@ -83,6 +83,7 @@ function CandidateAiSummary({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cached, setCached] = useState(false);
+  const [engine, setEngine] = useState(DEFAULT_SUMMARIZER_LABEL);
 
   const load = useCallback(
     async (force = false) => {
@@ -98,7 +99,6 @@ function CandidateAiSummary({
             candidate,
             care_need: careNeed,
             care_type: careType ?? 'specialist',
-            model: DEFAULT_LLM_MODEL,
             force_regenerate: force,
           }),
         });
@@ -106,6 +106,7 @@ function CandidateAiSummary({
           ok?: boolean;
           summary?: string;
           cached?: boolean;
+          engine?: string;
           error?: string;
         };
         if (!data.ok || !data.summary) {
@@ -115,6 +116,7 @@ function CandidateAiSummary({
         }
         setSummary(data.summary);
         setCached(!!data.cached);
+        setEngine(data.engine === 'genie' ? 'Genie' : data.engine ?? DEFAULT_SUMMARIZER_LABEL);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'AI summary request failed.');
       } finally {
@@ -132,7 +134,7 @@ function CandidateAiSummary({
     <section className="rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3">
       <div className="mb-2 flex items-center justify-between gap-2">
         <h3 className="text-[10px] font-semibold uppercase tracking-wide text-indigo-700">
-          AI card summary · {DEFAULT_LLM_MODEL}
+          AI card summary · {engine}
         </h3>
         <button
           type="button"
@@ -146,7 +148,7 @@ function CandidateAiSummary({
         </button>
       </div>
       {loading ? (
-        <p className="animate-pulse text-xs text-indigo-600">Calling Llama…</p>
+        <p className="animate-pulse text-xs text-indigo-600">Genie is thinking…</p>
       ) : error ? (
         <p className="text-xs text-rose-600">{error}</p>
       ) : summary ? (

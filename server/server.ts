@@ -6,6 +6,7 @@ import { setupMapSearchRoutes } from './routes/map-search-routes';
 import { setupReferralRoutes } from './routes/referral-routes';
 import { setupRouteMockRoutes } from './routes/route-mock';
 import { isGenieEnabled, isLocalDemo, usePythonBridge } from './lib/runtime-config';
+import type { GenieReferralClient } from './lib/referral-genie';
 import { warmupPythonBridge } from './lib/python-bridge';
 
 interface AppKitWithLakebase {
@@ -24,27 +25,30 @@ function asLakebaseAppkit(appkit: object): AppKitWithLakebase | null {
 const GENIE_HEALTHCARE_SPACE_ID =
   process.env.DATABRICKS_GENIE_SPACE_ID ?? '01f16954e5791df78bb099133a0041be';
 
-const plugins = isLocalDemo()
-  ? [server()]
-  : [
-      lakebase(),
-      server(),
-      ...(isGenieEnabled()
-        ? [
-            genie({
-              spaces: {
-                healthcare: GENIE_HEALTHCARE_SPACE_ID,
-              },
-            }),
-          ]
-        : []),
-    ];
+const plugins = (() => {
+  const geniePlugin = isGenieEnabled()
+    ? [
+        genie({
+          spaces: {
+            healthcare: GENIE_HEALTHCARE_SPACE_ID,
+          },
+        }),
+      ]
+    : [];
+
+  if (isLocalDemo()) {
+    return [server(), ...geniePlugin];
+  }
+
+  return [lakebase(), server(), ...geniePlugin];
+})();
 
 if (isLocalDemo()) {
   console.log(
-    '[carepilot] CAREPILOT_LOCAL_DEMO=1 — Lakebase + Genie skipped. ' +
-      'Set CAREPILOT_USE_LAKEBASE_REFERRAL=1 with Lakebase credentials for SQL search, ' +
-      'or CAREPILOT_USE_PYTHON_BRIDGE=1 for the CSV bridge.'
+    '[carepilot] CAREPILOT_LOCAL_DEMO=1 — Lakebase skipped.' +
+      (isGenieEnabled()
+        ? ' Genie enabled for referral summaries.'
+        : ' Set CAREPILOT_ENABLE_GENIE=1 for Genie summaries, CAREPILOT_USE_LAKEBASE_REFERRAL=1 for SQL search, or CAREPILOT_USE_PYTHON_BRIDGE=1 for the CSV bridge.')
   );
 } else {
   console.log(
@@ -78,6 +82,7 @@ createApp({
     setupReferralRoutes({
       server: appkit.server,
       ...(lakeApp ? { lakebase: lakeApp.lakebase } : {}),
+      ...('genie' in appkit && appkit.genie ? { genie: appkit.genie as GenieReferralClient } : {}),
     });
     setupRouteMockRoutes(appkit);
     setupMapSearchRoutes(appkit);

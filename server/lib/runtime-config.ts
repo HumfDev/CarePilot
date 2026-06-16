@@ -20,6 +20,16 @@ export function usePythonBridge(): boolean {
   return process.env.CAREPILOT_USE_PYTHON_BRIDGE === '1';
 }
 
+/** Use Genie (not Model Serving) for referral summaries, follow-ups, and intent. */
+export function useGenieForReferral(): boolean {
+  if (!isGenieEnabled()) return false;
+  if (process.env.CAREPILOT_USE_GENIE_REFERRAL === '0') return false;
+  if (process.env.CAREPILOT_USE_GENIE_REFERRAL === '1') return true;
+  return true;
+}
+
+export const GENIE_REFERRAL_ALIAS = process.env.CAREPILOT_GENIE_REFERRAL_ALIAS ?? 'healthcare';
+
 /** Primary referral path: Lakebase SQL + TypeScript scoring. */
 export function useLakebaseReferral(): boolean {
   if (usePythonBridge()) return false;

@@ -42,8 +42,33 @@ interface SearchActionState {
   error: string | null;
 }
 
-/** Default Foundation Model — same as carepilot-referral Streamlit app. */
-export const DEFAULT_LLM_MODEL = 'databricks-llama-4-maverick';
+/** Default summarizer label shown in the UI when status has not loaded yet. */
+export const DEFAULT_SUMMARIZER_LABEL = 'Genie';
+
+async function fetchSearchSummary(
+  params: ReferralSearchParams,
+  candidates: ReferralCandidate[],
+  feedbackApplied: boolean
+): Promise<{ text: string | null; engine: string }> {
+  try {
+    const res = await postJSON<{ ok: boolean; summary?: string; engine?: string; error?: string }>(
+      '/api/referral/summarize-search',
+      {
+        care_need: params.care_need,
+        care_type: params.care_type,
+        location_text: params.location_text,
+        candidates,
+        feedback_applied: feedbackApplied,
+      }
+    );
+    if (res.ok && res.summary) {
+      return { text: res.summary, engine: res.engine ?? 'genie' };
+    }
+    return { text: null, engine: 'template' };
+  } catch {
+    return { text: null, engine: 'template' };
+  }
+}
 
 function newId(prefix: string): string {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
@@ -121,7 +146,6 @@ async function fetchMessageIntent(
         location_text: params.location_text,
         candidate_count: candidates.length,
         top_facility_name: candidates[0]?.facility_name ?? null,
-        model: DEFAULT_LLM_MODEL,
       }
     );
     if (res.ok && res.intent) return res.intent;
@@ -136,42 +160,22 @@ async function fetchFollowupReply(
   params: ReferralSearchParams,
   candidates: ReferralCandidate[],
   feedbackApplied: boolean
-): Promise<string | null> {
+): Promise<{ text: string | null; engine: string }> {
   try {
-    const res = await postJSON<{ ok: boolean; reply?: string }>('/api/referral/chat', {
+    const res = await postJSON<{ ok: boolean; reply?: string; engine?: string }>('/api/referral/chat', {
       message,
       care_need: params.care_need,
       care_type: params.care_type,
       location_text: params.location_text,
       candidates,
       feedback_applied: feedbackApplied,
-      model: DEFAULT_LLM_MODEL,
     });
-    if (res.ok && res.reply) return res.reply;
-    return null;
+    if (res.ok && res.reply) {
+      return { text: res.reply, engine: res.engine ?? 'genie' };
+    }
+    return { text: null, engine: 'template' };
   } catch {
-    return null;
-  }
-}
-
-async function fetchLlamaSearchSummary(
-  params: ReferralSearchParams,
-  candidates: ReferralCandidate[],
-  feedbackApplied: boolean
-): Promise<string | null> {
-  try {
-    const res = await postJSON<{ ok: boolean; summary?: string; error?: string }>('/api/referral/summarize-search', {
-      care_need: params.care_need,
-      care_type: params.care_type,
-      location_text: params.location_text,
-      candidates,
-      feedback_applied: feedbackApplied,
-      model: DEFAULT_LLM_MODEL,
-    });
-    if (res.ok && res.summary) return res.summary;
-    return null;
-  } catch {
-    return null;
+    return { text: null, engine: 'template' };
   }
 }
 
@@ -179,7 +183,7 @@ export function useReferralSearch(options: UseReferralSearchOptions = {}) {
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
     const greeting =
       options.initialAssistantGreeting ??
-      'Type a referral request like "dialysis near Jaipur". I rank candidates with our evidence pipeline, then explain results with Databricks Llama 4 Maverick — verify before referral.';
+      'Type a referral request like "dialysis near Jaipur". I rank candidates with our evidence pipeline, then explain results with Databricks Genie — verify before referral.';
     return [
       {
         id: newId('msg'),
@@ -213,8 +217,8 @@ export function useReferralSearch(options: UseReferralSearchOptions = {}) {
       const reply = await fetchFollowupReply(text, searchParams, candidates, feedbackApplied);
       appendMessage({
         role: 'assistant',
-        text: reply ?? followupFallback(text, candidates),
-        meta: { kind: 'followup', model: reply ? DEFAULT_LLM_MODEL : 'template' },
+        text: reply.text ?? followupFallback(text, candidates),
+        meta: { kind: 'followup', model: reply.engine },
       });
       setSearch((prev) => ({ ...prev, summarizing: false }));
     },
@@ -261,14 +265,14 @@ export function useReferralSearch(options: UseReferralSearchOptions = {}) {
             setSearch({ loading: false, summarizing: false, error: null });
             return;
           }
-          const llamaText = await fetchLlamaSearchSummary(params, res.candidates ?? [], !!res.feedback_applied);
+          const summary = await fetchSearchSummary(params, res.candidates ?? [], !!res.feedback_applied);
           appendMessage({
             role: 'assistant',
-            text: llamaText ?? chatSummary(params, res.candidates ?? [], !!res.feedback_applied),
+            text: summary.text ?? chatSummary(params, res.candidates ?? [], !!res.feedback_applied),
             meta: {
               scenario_id: res.scenario_id,
               candidates: res.candidates?.length ?? 0,
-              model: llamaText ? DEFAULT_LLM_MODEL : 'template',
+              model: summary.text ? summary.engine : 'template',
             },
           });
         }

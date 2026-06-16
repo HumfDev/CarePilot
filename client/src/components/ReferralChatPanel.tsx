@@ -67,7 +67,7 @@ export function ReferralChatPanel({ referral, exampleQueries }: ReferralChatPane
       <div className="shrink-0 border-b border-neutral-200 px-4 py-3">
         <AppBrand variant="compact" />
         <p className="mt-2 text-xs text-neutral-500">
-          Evidence-aware ranking + <span className="text-indigo-600">Databricks Llama 4 Maverick</span> summaries
+          Evidence-aware ranking + <span className="text-indigo-600">Databricks Genie</span> summaries
         </p>
       </div>
 
@@ -85,7 +85,7 @@ export function ReferralChatPanel({ referral, exampleQueries }: ReferralChatPane
         {referral.search.summarizing && (
           <div className="flex justify-start">
             <div className="max-w-[60%] animate-pulse rounded-2xl rounded-bl-sm border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm text-indigo-700">
-              Llama 4 Maverick is thinking…
+              Genie is thinking…
             </div>
           </div>
         )}
