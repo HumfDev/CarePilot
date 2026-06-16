@@ -2,8 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { IndiaMapPanel } from '../components/IndiaMapPanel';
 import { RightChatPanel } from '../components/RightChatPanel';
+import { ReferralCandidateList } from '../components/ReferralCandidateList';
 import { ReferralCandidateCard } from '../components/ReferralCandidateCard';
-import { AppBrand } from '../components/AppBrand';
 import { useReferralSearch } from '../hooks/useReferralSearch';
 import { useMockRoute } from '../hooks/useMockRoute';
 import type { ReferralCandidate } from '../types/referral';
@@ -50,59 +50,54 @@ export function ChatPage() {
     [mockRoute, referral, userLocation],
   );
 
-  const handleSidebarSearch = useCallback(
-    async (input: { city: string; careNeed: string }) => {
-      await referral.searchFromSidebar({
-        city: input.city,
-        careNeed: input.careNeed,
-        plannerLocation,
-      });
-    },
-    [referral, plannerLocation],
-  );
-
-  const handleClearSearch = useCallback(() => {
-    referral.clearSearch();
-    mockRoute.clear();
-  }, [referral, mockRoute]);
-
   return (
-    <div className="flex h-screen flex-col bg-slate-50 text-neutral-900">
-      <header className="flex shrink-0 items-center justify-between gap-4 border-b border-neutral-200 bg-white px-4 py-2.5 shadow-sm sm:px-6">
-        <AppBrand variant="header" />
-        <span className="hidden text-[10px] font-medium uppercase tracking-widest text-neutral-500 md:inline">
-          Evidence-aware · Planner-facing · Not medical advice
-        </span>
-      </header>
-
-      <main className="min-h-0 flex-1 bg-slate-50">
+    <div className="flex h-screen flex-col bg-white text-neutral-900">
+      <main className="min-h-0 flex-1 bg-white">
         <PanelGroup direction="horizontal" className="h-full w-full">
-          <Panel defaultSize={72} minSize={40}>
-            <IndiaMapPanel
-              candidates={referral.candidates}
-              selectedCandidateId={referral.selectedCandidateId}
-              routeFacilityId={routeFacilityId}
-              userLocation={userLocation}
-              plannerLocation={plannerLocation}
-              onPlannerLocationChange={setPlannerLocation}
-              activeMockRoute={mockRoute.route}
-              mockRouteLoading={mockRoute.loading}
-              mockRouteError={mockRoute.error}
-              onClearMockRoute={mockRoute.clear}
-              onSelectCandidate={referral.selectCandidate}
-              referralFeedbackApplied={referral.feedbackApplied}
-              careNeedHint={referral.searchParams?.care_need ?? null}
-              locationHint={referral.searchParams?.location_text ?? null}
-              searchRadiusKm={referral.searchParams?.max_distance_km ?? null}
-              searchLoading={referral.search.loading}
-              searchError={referral.search.error}
-              onSidebarSearch={handleSidebarSearch}
-              onClearSearch={handleClearSearch}
-              onShowReferralRoute={handleShowReferralRoute}
-            />
+          <Panel defaultSize={72} minSize={35}>
+            {/* Phase 1: map on top, compact ranked list inside the same left panel. */}
+            <PanelGroup direction="vertical" className="h-full w-full">
+              <Panel defaultSize={referral.candidates.length ? 65 : 100} minSize={40}>
+                <IndiaMapPanel
+                  candidates={referral.candidates}
+                  selectedCandidateId={referral.selectedCandidateId}
+                  routeFacilityId={routeFacilityId}
+                  userLocation={userLocation}
+                  plannerLocation={plannerLocation}
+                  onPlannerLocationChange={setPlannerLocation}
+                  activeMockRoute={mockRoute.route}
+                  mockRouteLoading={mockRoute.loading}
+                  mockRouteError={mockRoute.error}
+                  onClearMockRoute={mockRoute.clear}
+                  onSelectCandidate={referral.selectCandidate}
+                  searchRadiusKm={referral.searchParams?.max_distance_km ?? null}
+                />
+              </Panel>
+              {referral.candidates.length > 0 ? (
+                <>
+                  <PanelResizeHandle className="h-1 bg-neutral-200 transition-colors hover:bg-neutral-300" />
+                  <Panel defaultSize={35} minSize={15}>
+                    <div className="flex h-full min-h-0 flex-col bg-white">
+                      <ReferralCandidateList
+                        candidates={referral.candidates}
+                        selectedCandidateId={referral.selectedCandidateId}
+                        onSelect={referral.selectCandidate}
+                        feedbackApplied={referral.feedbackApplied}
+                        userLocation={userLocation}
+                        routeFacilityId={routeFacilityId}
+                        route={mockRoute.route}
+                        routeLoading={mockRoute.loading}
+                        onShowRoute={handleShowReferralRoute}
+                        onClearRoute={mockRoute.clear}
+                      />
+                    </div>
+                  </Panel>
+                </>
+              ) : null}
+            </PanelGroup>
           </Panel>
           <PanelResizeHandle className="w-1 bg-neutral-200 transition-colors hover:bg-neutral-300" />
-          <Panel defaultSize={28} minSize={20}>
+          <Panel defaultSize={28} minSize={22} className="min-h-0">
             <RightChatPanel referral={referral} />
           </Panel>
         </PanelGroup>

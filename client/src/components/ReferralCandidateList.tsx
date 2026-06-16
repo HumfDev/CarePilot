@@ -34,7 +34,7 @@ function uncertaintyTone(level: string | null): { dot: string; label: string } {
   if (text.startsWith('low')) return { dot: 'bg-emerald-500', label: 'text-emerald-700' };
   if (text.startsWith('medium')) return { dot: 'bg-amber-500', label: 'text-amber-700' };
   if (text.startsWith('high')) return { dot: 'bg-rose-500', label: 'text-rose-700' };
-  return { dot: 'bg-neutral-400', label: 'text-neutral-600' };
+  return { dot: 'bg-neutral-500', label: 'text-neutral-400' };
 }
 
 function compactReason(reason: string | null, maxLen = 130): string {
@@ -75,19 +75,19 @@ export function ReferralCandidateList({
         <div
           className={`flex shrink-0 items-center justify-between px-3 py-2 ${embedded ? '' : 'border-b border-neutral-200 px-4'}`}
         >
-          <span className="text-xs font-semibold uppercase tracking-wide text-neutral-600">
+          <span className="text-xs font-semibold uppercase tracking-wide text-neutral-700">
             {embedded ? 'Ranked results' : 'Ranked candidates'} · {candidates.length}
           </span>
           {feedbackApplied ? (
-            <span className="rounded-md bg-indigo-50 px-1.5 py-0.5 text-[10px] font-medium text-indigo-700">
-              Feedback re-rank
+            <span className="rounded-md bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-medium text-blue-700">
+              Feedback re-rank active
             </span>
           ) : null}
         </div>
       ) : feedbackApplied ? (
         <div className="flex shrink-0 justify-end px-3 py-1.5">
-          <span className="rounded-md bg-indigo-50 px-1.5 py-0.5 text-[10px] font-medium text-indigo-700">
-            Feedback re-rank
+          <span className="rounded-md bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-medium text-blue-700">
+            Feedback re-rank active
           </span>
         </div>
       ) : null}
@@ -96,7 +96,7 @@ export function ReferralCandidateList({
           Route ETA uses departure {departureTime} · set in planner above
         </p>
       ) : null}
-      <ul className="min-h-0 flex-1 divide-y divide-neutral-100 overflow-y-auto">
+      <ul className="min-h-0 flex-1 divide-y divide-neutral-200 overflow-y-auto">
         {candidates.map((candidate) => {
           const isSelected = candidate.facility_id === selectedCandidateId;
           const score = candidate.feedback_adjusted_score ?? candidate.final_recommendation_score ?? 0;
@@ -114,7 +114,7 @@ export function ReferralCandidateList({
             <li key={candidate.facility_id}>
               <div
                 className={`flex items-stretch gap-1 px-2 py-1 transition-colors ${
-                  isSelected ? 'bg-indigo-50 ring-1 ring-inset ring-indigo-200' : 'hover:bg-neutral-50'
+                  isSelected ? 'bg-blue-500/10 ring-1 ring-inset ring-blue-500/40' : 'hover:bg-neutral-50'
                 }`}
               >
                 <button
@@ -130,7 +130,7 @@ export function ReferralCandidateList({
                       <span className="truncate text-sm font-medium text-neutral-900">{candidate.facility_name}</span>
                       {hasSuspicious ? (
                         <span
-                          className="shrink-0 rounded-md bg-rose-50 px-1 text-[10px] font-medium text-rose-700"
+                          className="shrink-0 rounded-md bg-rose-500/15 px-1 text-[10px] font-medium text-rose-700"
                           title={candidate.suspicious_evidence_flags?.join(', ')}
                         >
                           ⚠ suspicious
@@ -168,8 +168,8 @@ export function ReferralCandidateList({
                   }}
                   className={`my-1 shrink-0 self-center rounded-md px-2.5 py-1.5 text-[10px] font-medium ${
                     isRouteActive
-                      ? 'bg-indigo-600 text-white ring-1 ring-indigo-400/50'
-                      : 'border border-neutral-200 text-neutral-600 hover:bg-neutral-50'
+                      ? 'bg-blue-600 text-white ring-1 ring-blue-400/50'
+                      : 'border border-neutral-300 text-neutral-600 hover:bg-neutral-100'
                   } disabled:cursor-not-allowed disabled:opacity-40`}
                 >
                   {isRouteLoading ? '…' : isRouteActive ? 'Route on' : 'Route'}

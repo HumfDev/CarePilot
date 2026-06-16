@@ -1,9 +1,9 @@
 import type { MockRoute, TrafficLevel } from '../types/route';
 
 const TRAFFIC_TONE: Record<TrafficLevel, { dot: string; label: string; badge: string }> = {
-  Light: { dot: 'bg-emerald-500', label: 'text-emerald-700', badge: 'bg-emerald-50 ring-emerald-200' },
-  Moderate: { dot: 'bg-amber-500', label: 'text-amber-700', badge: 'bg-amber-50 ring-amber-200' },
-  Heavy: { dot: 'bg-rose-500', label: 'text-rose-700', badge: 'bg-rose-50 ring-rose-200' },
+  Light: { dot: 'bg-emerald-500', label: 'text-emerald-700', badge: 'bg-emerald-500/15 ring-emerald-500/30' },
+  Moderate: { dot: 'bg-amber-500', label: 'text-amber-700', badge: 'bg-amber-500/15 ring-amber-500/30' },
+  Heavy: { dot: 'bg-rose-500', label: 'text-rose-700', badge: 'bg-rose-500/15 ring-rose-500/30' },
 };
 
 interface MockRouteSummaryProps {
@@ -18,7 +18,7 @@ export function MockRouteSummary({ route, onClear }: MockRouteSummaryProps) {
   const header = isOsrm ? 'Road network route · OSRM' : 'Simulated route · demo only';
   const showTrafficMock = !isOsrm && route.traffic_delay_minutes > 0.5;
   return (
-    <div className="rounded-lg border border-neutral-200 bg-white/95 px-4 py-3 text-[11px] text-neutral-700 shadow-lg backdrop-blur-sm">
+    <div className="rounded-lg border border-neutral-200 bg-white/90 px-4 py-3 text-[11px] text-neutral-700 shadow-lg backdrop-blur-sm">
       <div className="flex items-start justify-between gap-2">
         <div>
           <div className="text-[10px] font-semibold uppercase tracking-wide text-neutral-500">
@@ -29,7 +29,7 @@ export function MockRouteSummary({ route, onClear }: MockRouteSummaryProps) {
         <button
           type="button"
           onClick={onClear}
-          className="rounded-md border border-neutral-200 px-2 py-0.5 text-[10px] text-neutral-600 hover:bg-neutral-50"
+          className="rounded-md border border-neutral-300 px-2 py-0.5 text-[10px] text-neutral-600 hover:bg-neutral-100"
         >
           Hide route
         </button>

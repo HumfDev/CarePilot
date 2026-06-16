@@ -19,7 +19,7 @@ import type { ReferralCandidate } from '../types/referral';
 import type { MockRoute } from '../types/route';
 import { MockRouteSummary } from './MockRouteSummary';
 import { MapSearchSidebar } from './MapSearchSidebar';
-import type { PlannerLocation } from './PlannerLocationControl';
+import { PlannerLocationControl, type PlannerLocation } from './PlannerLocationControl';
 
 const INDIA_CENTER: [number, number] = [20.5937, 78.9629];
 
@@ -77,7 +77,7 @@ function buildRankedDivIcon(candidate: ReferralCandidate, selected: boolean): L.
         width:${size}px;height:${size}px;border-radius:9999px;
         background:${color};color:#0a0a0a;font-weight:700;font-size:${Math.max(10, size * 0.4)}px;
         border:${selected ? '3px solid #FFFFFF' : '2px solid rgba(0,0,0,0.6)'};
-        box-shadow:0 0 0 ${selected ? '4px rgba(99,102,241,0.45)' : '2px rgba(0,0,0,0.4)'};
+        box-shadow:0 0 0 ${selected ? '4px rgba(0,122,255,0.45)' : '2px rgba(0,0,0,0.4)'};
       ">${candidate.rank}</div>
     `,
   });
@@ -130,7 +130,7 @@ function RankedCandidateMarkers({
                     {candidate.evidence_snippets[0].text.length > 140 ? '…' : ''}”
                   </div>
                 ) : null}
-                <div className="mt-1 text-[10px] text-indigo-300">Open from ranked list for details</div>
+                <div className="mt-1 text-[10px] text-blue-600">Open from ranked list for details</div>
               </div>
             </Tooltip>
           </Marker>
@@ -145,7 +145,7 @@ function UserLocationMarker({ lat, lon }: { lat: number; lon: number }) {
     <CircleMarker
       center={[lat, lon]}
       radius={6}
-      pathOptions={{ color: '#FFFFFF', weight: 2, fillColor: '#6366F1', fillOpacity: 0.95 }}
+      pathOptions={{ color: '#FFFFFF', weight: 2, fillColor: '#007AFF', fillOpacity: 0.95 }}
     >
       <Tooltip permanent direction="top" offset={[0, -8]}>
         You / search origin
@@ -218,13 +218,13 @@ function ScoreLegend({ hasScores, hidden }: { hasScores: boolean; hidden?: boole
   return (
     <div className="absolute right-3 top-3 z-[1000]">
       {open ? (
-        <div className="rounded-md border border-neutral-200 bg-white/95 px-2.5 py-2 text-[10px] text-neutral-600 backdrop-blur-sm shadow-sm">
+        <div className="rounded-md border border-neutral-200 bg-white/85 px-2.5 py-2 text-[10px] text-neutral-600 backdrop-blur-sm">
           <div className="mb-1 flex items-center justify-between gap-2">
             <span className="font-semibold uppercase tracking-wide text-neutral-500">Trust score (v4)</span>
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="rounded border border-neutral-200 px-1 text-[9px] text-neutral-500 hover:bg-neutral-50"
+              className="rounded border border-neutral-300 px-1 text-[9px] text-neutral-500 hover:bg-neutral-100"
               aria-label="Hide trust score legend"
             >
               Hide
@@ -256,7 +256,7 @@ function ScoreLegend({ hasScores, hidden }: { hasScores: boolean; hidden?: boole
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="rounded-md border border-neutral-200 bg-white/95 px-2 py-1 text-[10px] text-neutral-600 backdrop-blur-sm shadow-sm hover:bg-neutral-50"
+          className="rounded-md border border-neutral-200 bg-white/85 px-2 py-1 text-[10px] text-neutral-500 backdrop-blur-sm hover:bg-neutral-50"
         >
           Trust score legend
         </button>
@@ -266,7 +266,7 @@ function ScoreLegend({ hasScores, hidden }: { hasScores: boolean; hidden?: boole
 }
 
 const ROUTE_POLYLINE_OPTIONS = {
-  color: '#6366F1',
+  color: '#007AFF',
   weight: 4,
   opacity: 0.85,
   dashArray: '6 4',
@@ -300,6 +300,13 @@ export function IndiaMapPanel({
   const [boundaryError, setBoundaryError] = useState<string | null>(null);
   const [locationPickMode, setLocationPickMode] = useState(false);
 
+  const showSidebar =
+    onPlannerLocationChange != null &&
+    onSidebarSearch != null &&
+    onClearSearch != null &&
+    onSelectCandidate != null &&
+    onShowReferralRoute != null;
+
   useEffect(() => {
     fetch('/geo/india-adm0.geojson')
       .then((res) => {
@@ -329,107 +336,144 @@ export function IndiaMapPanel({
   const mapReady = !loading && indiaBoundary != null;
 
   return (
-    <div className="flex h-full min-h-0 bg-white" data-testid="india-map-panel">
-      {onPlannerLocationChange && onSidebarSearch && onClearSearch && onSelectCandidate && onShowReferralRoute ? (
-        <MapSearchSidebar
-          boundaryError={boundaryError}
-          plannerLocation={plannerLocation}
-          onPlannerLocationChange={onPlannerLocationChange}
-          onPickModeChange={setLocationPickMode}
-          pickMode={locationPickMode}
-          candidates={candidates}
-          selectedCandidateId={selectedCandidateId}
-          onSelectCandidate={onSelectCandidate}
-          feedbackApplied={referralFeedbackApplied}
-          careNeedHint={careNeedHint}
-          locationHint={locationHint}
-          searchLoading={searchLoading}
-          searchError={searchError}
-          onSearch={onSidebarSearch}
-          onClear={onClearSearch}
-          userLocation={userLocation}
-          routeFacilityId={routeFacilityId}
-          route={activeMockRoute}
-          routeLoading={mockRouteLoading}
-          onShowRoute={onShowReferralRoute}
-          onClearRoute={onClearMockRoute}
-        />
+    <div className="flex h-full min-h-0 flex-col bg-white" data-testid="india-map-panel">
+      {!showSidebar ? (
+        <>
+          <div className="flex shrink-0 items-center justify-between gap-3 border-b border-neutral-200 px-4 py-3">
+            <div>
+              <h2 className="text-sm font-semibold text-neutral-900">India Healthcare Map</h2>
+              <p className="text-xs text-neutral-500">
+                {locationPickMode
+                  ? 'Click inside India to set your planner location.'
+                  : hasCandidates
+                    ? 'Ranked referral candidates — set my location for route ETA.'
+                    : 'Ask the chat for referral candidates near a city.'}
+              </p>
+            </div>
+          </div>
+
+          <div className="shrink-0 border-b border-neutral-200 px-4 py-2 text-xs text-neutral-500">
+            {loading && 'Loading map data…'}
+            {boundaryError && `Boundary error: ${boundaryError}`}
+            {!loading && !boundaryError && meta ? (
+              <span>
+                {meta.scored.toLocaleString()} / {meta.count.toLocaleString()} scored (v4)
+              </span>
+            ) : null}
+          </div>
+        </>
       ) : null}
 
-      <div className="relative min-h-0 flex-1">
-        {!mapReady ? (
-          <div className="flex h-full items-center justify-center text-sm text-neutral-500">
-            {loading ? 'Loading map data…' : 'Preparing map…'}
-          </div>
-        ) : (
-          <MapContainer center={INDIA_CENTER} zoom={5} className="h-full w-full" scrollWheelZoom>
-            <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-              url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-            <GeoJSON
-              data={indiaBoundary}
-              style={{
-                color: '#007AFF',
-                weight: 1,
-                fillColor: '#007AFF',
-                fillOpacity: 0.05,
-              }}
-            />
-            {hasCandidates ? (
-              <>
-                {userLocation && searchRadiusKm ? (
-                  <Circle
-                    center={[userLocation.lat, userLocation.lon]}
-                    radius={searchRadiusKm * 1000}
-                    pathOptions={{ color: '#14b8a6', fillColor: '#14b8a6', fillOpacity: 0.08, weight: 2 }}
+      <div className="flex min-h-0 flex-1">
+        {showSidebar ? (
+          <MapSearchSidebar
+            boundaryError={boundaryError}
+            plannerLocation={plannerLocation}
+            onPlannerLocationChange={onPlannerLocationChange}
+            onPickModeChange={setLocationPickMode}
+            pickMode={locationPickMode}
+            candidates={candidates}
+            selectedCandidateId={selectedCandidateId}
+            onSelectCandidate={onSelectCandidate}
+            feedbackApplied={referralFeedbackApplied}
+            careNeedHint={careNeedHint}
+            locationHint={locationHint}
+            searchLoading={searchLoading}
+            searchError={searchError}
+            onSearch={onSidebarSearch}
+            onClear={onClearSearch}
+            userLocation={userLocation}
+            routeFacilityId={routeFacilityId}
+            route={activeMockRoute}
+            routeLoading={mockRouteLoading}
+            onShowRoute={onShowReferralRoute}
+            onClearRoute={onClearMockRoute}
+          />
+        ) : null}
+
+        <div className="relative min-h-0 flex-1">
+          {!mapReady ? (
+            <div className="flex h-full items-center justify-center text-sm text-neutral-500">
+              {loading ? 'Loading map data…' : 'Preparing map…'}
+            </div>
+          ) : (
+            <MapContainer center={INDIA_CENTER} zoom={5} className="h-full w-full" scrollWheelZoom>
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
+              <GeoJSON
+                data={indiaBoundary}
+                style={{
+                  color: '#007AFF',
+                  weight: 1,
+                  fillColor: '#007AFF',
+                  fillOpacity: 0.05,
+                }}
+              />
+              {hasCandidates ? (
+                <>
+                  {userLocation && searchRadiusKm ? (
+                    <Circle
+                      center={[userLocation.lat, userLocation.lon]}
+                      radius={searchRadiusKm * 1000}
+                      pathOptions={{ color: '#14b8a6', fillColor: '#14b8a6', fillOpacity: 0.08, weight: 2 }}
+                    />
+                  ) : null}
+                  <RankedCandidateMarkers
+                    candidates={candidates}
+                    selectedCandidateId={selectedCandidateId}
+                    routeFacilityId={routeFacilityId}
+                    onSelectCandidate={onSelectCandidate}
                   />
-                ) : null}
-                <RankedCandidateMarkers
+                </>
+              ) : null}
+              <ScoreLegend hasScores={meta?.hasV4Scores ?? false} hidden={hasCandidates} />
+              {userLocation ? <UserLocationMarker lat={userLocation.lat} lon={userLocation.lon} /> : null}
+              {hasCandidates ? (
+                <MapFlyTo
                   candidates={candidates}
+                  userLocation={userLocation}
                   selectedCandidateId={selectedCandidateId}
                   routeFacilityId={routeFacilityId}
-                  onSelectCandidate={onSelectCandidate}
                 />
-              </>
-            ) : null}
-            <ScoreLegend hasScores={meta?.hasV4Scores ?? false} hidden={hasCandidates} />
-            {userLocation ? <UserLocationMarker lat={userLocation.lat} lon={userLocation.lon} /> : null}
-            {hasCandidates ? (
-              <MapFlyTo
-                candidates={candidates}
-                userLocation={userLocation}
-                selectedCandidateId={selectedCandidateId}
-                routeFacilityId={routeFacilityId}
-              />
-            ) : null}
-            {activeMockRoute?.route_polyline ? (
-              <Polyline positions={activeMockRoute.route_polyline} pathOptions={ROUTE_POLYLINE_OPTIONS} />
-            ) : null}
-            <MapClickHandler enabled={mapReady && locationPickMode} onMapClick={handleMapClick} />
-          </MapContainer>
-        )}
-        {mockRouteLoading && !activeMockRoute ? (
-          <div className="pointer-events-none absolute left-3 top-3 z-[1000] max-w-md">
-            <div className="pointer-events-auto rounded-lg border border-neutral-200 bg-white/95 px-4 py-3 text-[11px] text-neutral-500 shadow-lg backdrop-blur-sm animate-pulse">
-              Calculating simulated ETA…
+              ) : null}
+              {activeMockRoute?.route_polyline ? (
+                <Polyline positions={activeMockRoute.route_polyline} pathOptions={ROUTE_POLYLINE_OPTIONS} />
+              ) : null}
+              <MapClickHandler enabled={mapReady && locationPickMode} onMapClick={handleMapClick} />
+            </MapContainer>
+          )}
+          {mockRouteLoading && !activeMockRoute ? (
+            <div className="pointer-events-none absolute left-3 top-3 z-[1000] max-w-md">
+              <div className="pointer-events-auto rounded-lg border border-neutral-200 bg-white/90 px-4 py-3 text-[11px] text-neutral-500 shadow-lg backdrop-blur-sm animate-pulse">
+                Calculating simulated ETA…
+              </div>
             </div>
-          </div>
-        ) : null}
-        {mockRouteError ? (
-          <div className="pointer-events-none absolute left-3 top-3 z-[1000] max-w-md">
-            <div className="pointer-events-auto rounded-lg border border-rose-200 bg-white/95 px-4 py-3 text-[11px] text-rose-700 shadow-lg backdrop-blur-sm">
-              {mockRouteError}
+          ) : null}
+          {mockRouteError ? (
+            <div className="pointer-events-none absolute left-3 top-3 z-[1000] max-w-md">
+              <div className="pointer-events-auto rounded-lg border border-rose-500/30 bg-white/90 px-4 py-3 text-[11px] text-rose-700 shadow-lg backdrop-blur-sm">
+                {mockRouteError}
+              </div>
             </div>
-          </div>
-        ) : null}
-        {activeMockRoute && onClearMockRoute ? (
-          <div className="pointer-events-none absolute left-3 top-3 z-[1000] max-w-md">
-            <div className="pointer-events-auto">
-              <MockRouteSummary route={activeMockRoute} onClear={onClearMockRoute} />
+          ) : null}
+          {activeMockRoute && onClearMockRoute ? (
+            <div className="pointer-events-none absolute left-3 top-3 z-[1000] max-w-md">
+              <div className="pointer-events-auto">
+                <MockRouteSummary route={activeMockRoute} onClear={onClearMockRoute} />
+              </div>
             </div>
-          </div>
-        ) : null}
+          ) : null}
+          {onPlannerLocationChange && !showSidebar ? (
+            <PlannerLocationControl
+              location={plannerLocation}
+              onChange={onPlannerLocationChange}
+              pickMode={locationPickMode}
+              onPickModeChange={setLocationPickMode}
+            />
+          ) : null}
+        </div>
       </div>
     </div>
   );

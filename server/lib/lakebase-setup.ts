@@ -6,6 +6,11 @@ interface AppKitWithLakebase {
 
 const UC_HEALTHCARE_TABLES = [
   {
+    table_name: 'facility_feature_table_v4',
+    unity_catalog_table: 'workspace.default.facility_feature_table_v4',
+    description: 'Feature-engineered facility table with resolved geocoordinates and enriched attributes',
+  },
+  {
     table_name: 'facilities',
     unity_catalog_table: 'databricks_virtue_foundation_dataset_dais_2026.virtue_foundation_dataset.facilities',
     description: 'Healthcare facilities (names, locations, specialties, capacity)',

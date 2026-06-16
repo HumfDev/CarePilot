@@ -1,7 +1,7 @@
 /**
  * Referral candidate detail card.
  *
- * Rendered as a modal overlay so it works inside Phase 1's `Map | Chat` shell
+ * Rendered as a full-screen overlay so it works inside Phase 1's `Map | Chat` shell
  * without claiming layout real estate. It surfaces the full evidence-aware
  * contract that the Python scoring pipeline returns:
  *
@@ -17,7 +17,7 @@
  * The component never recomputes scores. It only displays what the bridge
  * delivered.
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { ReferralCandidate, ReviewDecision } from '../types/referral';
 import type { ReferralSummarizer } from '../types/referral';
 import { DEFAULT_SUMMARIZER_LABEL, summarizerDisplayName } from '../hooks/useReferralSearch';
@@ -56,10 +56,10 @@ function fmtScore(value: number | null | undefined, digits = 1): string {
 
 function uncertaintyChip(level: string | null | undefined) {
   const text = (level ?? '').toLowerCase();
-  if (text.startsWith('low')) return 'bg-emerald-50 text-emerald-700 ring-emerald-200';
-  if (text.startsWith('medium')) return 'bg-amber-50 text-amber-700 ring-amber-200';
-  if (text.startsWith('high')) return 'bg-rose-50 text-rose-700 ring-rose-200';
-  return 'bg-neutral-100 text-neutral-700 ring-neutral-200';
+  if (text.startsWith('low')) return 'bg-emerald-500/15 text-emerald-700 ring-emerald-500/30';
+  if (text.startsWith('medium')) return 'bg-amber-500/15 text-amber-700 ring-amber-500/30';
+  if (text.startsWith('high')) return 'bg-rose-500/15 text-rose-700 ring-rose-500/30';
+  return 'bg-neutral-100 text-neutral-700 ring-neutral-300';
 }
 
 function ScoreCell({ label, value, accent }: { label: string; value: string; accent?: string }) {
@@ -146,9 +146,9 @@ function CandidateAiSummary({
   }, [load, summarizer]);
 
   return (
-    <section className="rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3">
+    <section className="rounded-lg border border-blue-500/30 bg-blue-500/5 px-4 py-3">
       <div className="mb-2 flex items-center justify-between gap-2">
-        <h3 className="text-[10px] font-semibold uppercase tracking-wide text-indigo-700">
+        <h3 className="text-[10px] font-semibold uppercase tracking-wide text-blue-600">
           AI card summary · {engineLabel}
         </h3>
         <button
@@ -157,17 +157,17 @@ function CandidateAiSummary({
           onClick={() => {
             void load(true);
           }}
-          className="rounded-md border border-indigo-200 px-2 py-0.5 text-[10px] text-indigo-700 hover:bg-indigo-100 disabled:opacity-40"
+          className="rounded-md border border-blue-500/40 px-2 py-0.5 text-[10px] text-blue-700 hover:bg-blue-500/15 disabled:opacity-40"
         >
           Regenerate
         </button>
       </div>
       {loading ? (
-        <p className="animate-pulse text-xs text-indigo-600">{engineLabel} is thinking…</p>
+        <p className="animate-pulse text-xs text-blue-600/80">{engineLabel} is thinking…</p>
       ) : error ? (
-        <p className="text-xs text-rose-600">{error}</p>
+        <p className="text-xs text-rose-700">{error}</p>
       ) : summary ? (
-        <p className="whitespace-pre-line text-xs leading-relaxed text-neutral-700">{summary}</p>
+        <p className="whitespace-pre-line text-xs leading-relaxed text-neutral-800">{summary}</p>
       ) : (
         <p className="text-xs text-neutral-500">No AI summary yet.</p>
       )}
@@ -176,63 +176,6 @@ function CandidateAiSummary({
       ) : null}
     </section>
   );
-}
-
-function clampCardPosition(x: number, y: number, cardW: number, cardH: number) {
-  const pad = 16;
-  const minVisible = 72;
-  return {
-    x: Math.max(pad - cardW + minVisible, Math.min(window.innerWidth - pad - minVisible, x)),
-    y: Math.max(pad, Math.min(window.innerHeight - pad - Math.min(cardH, minVisible), y)),
-  };
-}
-
-function useDraggableCard() {
-  const cardRef = useRef<HTMLDivElement>(null);
-  const dragRef = useRef<{ startX: number; startY: number; originX: number; originY: number } | null>(null);
-  const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
-  const [dragging, setDragging] = useState(false);
-
-  useEffect(() => {
-    if (!dragging) return undefined;
-    function onMove(e: PointerEvent) {
-      const d = dragRef.current;
-      if (!d) return;
-      const el = cardRef.current;
-      const w = el?.offsetWidth ?? 768;
-      const h = el?.offsetHeight ?? 400;
-      setPos(clampCardPosition(d.originX + (e.clientX - d.startX), d.originY + (e.clientY - d.startY), w, h));
-    }
-    function onUp() {
-      dragRef.current = null;
-      setDragging(false);
-    }
-    window.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerup', onUp);
-    window.addEventListener('pointercancel', onUp);
-    return () => {
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onUp);
-      window.removeEventListener('pointercancel', onUp);
-    };
-  }, [dragging]);
-
-  const onDragHandlePointerDown = useCallback(
-    (e: React.PointerEvent<HTMLDivElement>) => {
-      if ((e.target as HTMLElement).closest('button')) return;
-      e.preventDefault();
-      const el = cardRef.current;
-      if (!el) return;
-      const rect = el.getBoundingClientRect();
-      const origin = pos ?? { x: rect.left, y: rect.top };
-      if (!pos) setPos(origin);
-      dragRef.current = { startX: e.clientX, startY: e.clientY, originX: origin.x, originY: origin.y };
-      setDragging(true);
-    },
-    [pos],
-  );
-
-  return { cardRef, pos, dragging, onDragHandlePointerDown };
 }
 
 function ReferralCandidateCardInner({
@@ -252,7 +195,6 @@ function ReferralCandidateCardInner({
   const [note, setNote] = useState('');
   const [overrideScore, setOverrideScore] = useState('');
   const [overrideReason, setOverrideReason] = useState('');
-  const { cardRef, pos, dragging, onDragHandlePointerDown } = useDraggableCard();
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -283,31 +225,26 @@ function ReferralCandidateCardInner({
   return (
     <>
       <div
-        ref={cardRef}
         role="dialog"
-        aria-modal="false"
-        className={`fixed z-[2001] flex max-h-[90vh] w-[min(48rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-neutral-200 bg-white text-neutral-900 shadow-2xl ring-1 ring-black/5 ${
-          dragging ? 'select-none' : ''
-        }`}
-        style={pos ? { left: pos.x, top: pos.y } : { left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}
+        aria-modal="true"
+        className="fixed inset-0 z-[2001] flex h-full w-full flex-col overflow-hidden bg-white text-neutral-900"
       >
-        {/* Header — drag handle */}
-        <div
-          className={`flex items-start justify-between gap-4 border-b border-neutral-200 px-6 py-4 ${
-            dragging ? 'cursor-grabbing' : 'cursor-grab'
-          }`}
-          onPointerDown={onDragHandlePointerDown}
-        >
+        {/* Header */}
+        <div className="relative shrink-0 border-b border-neutral-200 px-6 py-4 pr-14">
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full text-xl leading-none text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900"
+            aria-label="Close candidate card"
+          >
+            ×
+          </button>
           <div className="min-w-0">
             <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wide text-neutral-400">
-              <span className="text-neutral-600" aria-hidden="true">
-                ⠿
-              </span>
               <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-neutral-100 text-[10px] font-semibold text-neutral-700">
                 {candidate.rank}
               </span>
               <span>Candidate for review</span>
-              <span className="normal-case text-neutral-600">· drag to move</span>
             </div>
             <h2 className="mt-1 truncate text-lg font-semibold text-neutral-900">{candidate.facility_name}</h2>
             <p className="text-xs text-neutral-400">
@@ -316,14 +253,6 @@ function ReferralCandidateCardInner({
               {candidate.distance_km != null ? ` · ${candidate.distance_km.toFixed(1)} km` : ''}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-md border border-neutral-200 px-2 py-1 text-xs text-neutral-600 hover:bg-neutral-50"
-            aria-label="Close candidate card"
-          >
-            Close
-          </button>
         </div>
 
         {/* Body */}
@@ -340,7 +269,7 @@ function ReferralCandidateCardInner({
           {/* Scores */}
           <section>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-              <ScoreCell label="Final score" value={fmtScore(finalScore)} accent="text-indigo-600" />
+              <ScoreCell label="Final score" value={fmtScore(finalScore)} accent="text-blue-600" />
               {showRaw ? <ScoreCell label="Raw score" value={fmtScore(rawScore)} /> : null}
               {feedbackDelta !== 0 ? (
                 <ScoreCell
@@ -365,7 +294,7 @@ function ReferralCandidateCardInner({
                 </span>
               ) : null}
               {candidate.feedback_reason ? (
-                <span className="rounded-md bg-indigo-50 px-2 py-0.5 text-[11px] text-indigo-700">
+                <span className="rounded-md bg-blue-500/15 px-2 py-0.5 text-[11px] text-blue-700">
                   feedback: {candidate.feedback_reason}
                 </span>
               ) : null}
@@ -406,7 +335,7 @@ function ReferralCandidateCardInner({
                         <span className="ml-auto text-neutral-500">{snippet.matched_terms.join(', ')}</span>
                       ) : null}
                     </div>
-                    <p className="text-neutral-200">{snippet.text}</p>
+                    <p className="text-neutral-700">{snippet.text}</p>
                   </li>
                 ))}
               </ul>
@@ -420,7 +349,7 @@ function ReferralCandidateCardInner({
           {/* URL classification */}
           <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <UrlBucket label="Facility-related URLs" urls={facilityUrls} tone="emerald" />
-            <UrlBucket label="Care-need evidence URLs" urls={careUrls} tone="indigo" />
+            <UrlBucket label="Care-need evidence URLs" urls={careUrls} tone="blue" />
             <UrlBucket
               label="Unrelated URLs"
               urls={unrelatedUrls}
@@ -445,7 +374,7 @@ function ReferralCandidateCardInner({
               <h3 className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-400">
                 Score breakdown
               </h3>
-              <ul className="grid grid-cols-2 gap-1 text-[11px] text-neutral-300 sm:grid-cols-3">
+              <ul className="grid grid-cols-2 gap-1 text-[11px] text-neutral-700 sm:grid-cols-3">
                 {breakdown.map((entry, idx) => {
                   const label = entry.component ?? `comp ${idx + 1}`;
                   return (
@@ -472,7 +401,7 @@ function ReferralCandidateCardInner({
                   void onShortlist(candidate);
                 }}
                 disabled={!!actionPending}
-                className="rounded-md bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-200 hover:bg-emerald-100 disabled:opacity-50"
+                className="rounded-md bg-emerald-500/15 px-3 py-1 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-500/30 hover:bg-emerald-500/25 disabled:opacity-50"
               >
                 Save to shortlist
               </button>
@@ -482,7 +411,7 @@ function ReferralCandidateCardInner({
                   void onReview(candidate, 'accepted');
                 }}
                 disabled={!!actionPending}
-                className="rounded-md bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700 ring-1 ring-inset ring-indigo-200 hover:bg-indigo-100 disabled:opacity-50"
+                className="rounded-md bg-blue-500/15 px-3 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-500/30 hover:bg-blue-500/25 disabled:opacity-50"
               >
                 Mark accepted
               </button>
@@ -492,7 +421,7 @@ function ReferralCandidateCardInner({
                   void onReview(candidate, 'needs_verification');
                 }}
                 disabled={!!actionPending}
-                className="rounded-md bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-200 hover:bg-amber-100 disabled:opacity-50"
+                className="rounded-md bg-amber-500/15 px-3 py-1 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-500/30 hover:bg-amber-500/25 disabled:opacity-50"
               >
                 Needs verification
               </button>
@@ -502,7 +431,7 @@ function ReferralCandidateCardInner({
                   void onReview(candidate, 'rejected');
                 }}
                 disabled={!!actionPending}
-                className="rounded-md bg-rose-50 px-3 py-1 text-xs font-medium text-rose-700 ring-1 ring-inset ring-rose-200 hover:bg-rose-100 disabled:opacity-50"
+                className="rounded-md bg-rose-500/15 px-3 py-1 text-xs font-medium text-rose-700 ring-1 ring-inset ring-rose-500/30 hover:bg-rose-500/25 disabled:opacity-50"
               >
                 Reject
               </button>
@@ -517,7 +446,7 @@ function ReferralCandidateCardInner({
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   placeholder="e.g. Confirmed dialysis chairs by phone"
-                  className="flex-1 rounded-md border border-neutral-200 bg-white px-2 py-1 text-xs text-neutral-900 placeholder:text-neutral-400 focus:border-indigo-400 focus:outline-none"
+                  className="flex-1 rounded-md border border-neutral-300 bg-white px-2 py-1 text-xs text-neutral-900 placeholder:text-neutral-400 focus:border-blue-400 focus:outline-none"
                 />
                 <button
                   type="button"
@@ -527,7 +456,7 @@ function ReferralCandidateCardInner({
                     if (!text) return;
                     void Promise.resolve(onSaveNote(candidate, text)).then(() => setNote(''));
                   }}
-                  className="rounded-md border border-neutral-200 px-3 py-1 text-xs font-medium text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
+                  className="rounded-md border border-neutral-300 px-3 py-1 text-xs font-medium text-neutral-700 hover:bg-neutral-100 disabled:opacity-50"
                 >
                   Save note
                 </button>
@@ -546,14 +475,14 @@ function ReferralCandidateCardInner({
                   value={overrideScore}
                   onChange={(e) => setOverrideScore(e.target.value)}
                   placeholder="0–100"
-                  className="w-24 rounded-md border border-neutral-200 bg-white px-2 py-1 text-xs text-neutral-900 focus:border-indigo-400 focus:outline-none"
+                  className="w-24 rounded-md border border-neutral-300 bg-white px-2 py-1 text-xs text-neutral-900 focus:border-blue-400 focus:outline-none"
                 />
                 <input
                   type="text"
                   value={overrideReason}
                   onChange={(e) => setOverrideReason(e.target.value)}
                   placeholder="Reason (e.g. phone-verified)"
-                  className="flex-1 rounded-md border border-neutral-200 bg-white px-2 py-1 text-xs text-neutral-900 placeholder:text-neutral-400 focus:border-indigo-400 focus:outline-none"
+                  className="flex-1 rounded-md border border-neutral-300 bg-white px-2 py-1 text-xs text-neutral-900 placeholder:text-neutral-400 focus:border-blue-400 focus:outline-none"
                 />
                 <button
                   type="button"
@@ -566,7 +495,7 @@ function ReferralCandidateCardInner({
                       setOverrideReason('');
                     });
                   }}
-                  className="rounded-md border border-neutral-200 px-3 py-1 text-xs font-medium text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
+                  className="rounded-md border border-neutral-300 px-3 py-1 text-xs font-medium text-neutral-700 hover:bg-neutral-100 disabled:opacity-50"
                 >
                   Save override
                 </button>
@@ -576,7 +505,7 @@ function ReferralCandidateCardInner({
         </div>
 
         {/* Footer */}
-        <div className="border-t border-neutral-200 bg-neutral-50 px-6 py-3 text-[11px] text-neutral-500">
+        <div className="shrink-0 border-t border-neutral-200 bg-white px-6 py-3 text-[11px] text-neutral-500">
           Verification step: confirm the matched evidence with a phone call or the official website before referring a
           patient. <span className="text-neutral-500">Not medical advice — planner-facing referral copilot only.</span>
         </div>
@@ -593,13 +522,13 @@ function UrlBucket({
 }: {
   label: string;
   urls: string[];
-  tone: 'emerald' | 'indigo' | 'rose';
+  tone: 'emerald' | 'blue' | 'rose';
   hint?: string;
 }) {
   const palette = {
-    emerald: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-    indigo: 'border-indigo-200 bg-indigo-50 text-indigo-700',
-    rose: 'border-rose-200 bg-rose-50 text-rose-700',
+    emerald: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700',
+    blue: 'border-blue-500/30 bg-blue-500/10 text-blue-700',
+    rose: 'border-rose-500/30 bg-rose-500/10 text-rose-700',
   }[tone];
   return (
     <div className={`rounded-md border ${palette} px-3 py-2 text-[11px]`}>
@@ -626,13 +555,13 @@ function UrlBucket({
 
 function FlagsBlock({ title, flags, tone }: { title: string; flags: string[]; tone: 'amber' | 'rose' }) {
   const palette = {
-    amber: 'border-amber-200 bg-amber-50 text-amber-800',
-    rose: 'border-rose-200 bg-rose-50 text-rose-700',
+    amber: 'border-amber-500/30 bg-amber-500/10 text-amber-700',
+    rose: 'border-rose-500/30 bg-rose-500/10 text-rose-700',
   }[tone];
   return (
     <div className={`rounded-md border ${palette} px-3 py-2 text-[11px]`}>
       <div className="text-[10px] font-semibold uppercase tracking-wide opacity-80">{title}</div>
-      <ul className="mt-1 list-disc space-y-0.5 pl-4 text-neutral-700">
+      <ul className="mt-1 list-disc space-y-0.5 pl-4 text-neutral-800">
         {flags.map((flag) => (
           <li key={flag}>{flag}</li>
         ))}

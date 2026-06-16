@@ -36,6 +36,8 @@ export interface SearchScoreInput {
   user_lon: number;
   max_distance_km: number;
   top_n: number;
+  /** LLM-assessed urgency (1–10). When set, applies quadratic distance re-weighting after base ranking. */
+  urgency_score?: number;
 }
 
 const CONDITION_KEYWORDS: Record<string, string[]> = {
@@ -409,4 +411,92 @@ export function rankFacilityRows(rows: FacilityRow[], input: SearchScoreInput): 
     .slice(0, input.top_n);
 
   return within.map((c, i) => ({ ...c, rank: i + 1 }));
+}
+
+// ---------------------------------------------------------------------------
+// Urgency-aware quadratic distance re-weighting — mirrors python_bridge/referral_cli.py
+// ---------------------------------------------------------------------------
+
+const URGENCY_DISTANCE_BUCKETS: Record<string, Array<[number, number]>> = {
+  emergency: [[2, 100], [5, 85], [10, 60], [20, 35]],
+  general: [[5, 100], [10, 85], [25, 65], [50, 40]],
+  specialist: [[10, 100], [25, 85], [50, 70], [100, 45]],
+  maternity: [[5, 100], [10, 85], [25, 65], [50, 40]],
+  chronic: [[10, 100], [25, 85], [50, 70], [100, 45]],
+};
+
+const URGENCY_NONDIST_WEIGHTS: Record<string, Record<string, number>> = {
+  emergency: { condition: 0.2, trust: 0.15, evidence: 0.2, local_need: 0.05 },
+  general: { condition: 0.2, trust: 0.25, evidence: 0.2, local_need: 0.05 },
+  specialist: { condition: 0.3, trust: 0.2, evidence: 0.25, local_need: 0.05 },
+  maternity: { condition: 0.25, trust: 0.2, evidence: 0.2, local_need: 0.05 },
+  chronic: { condition: 0.3, trust: 0.2, evidence: 0.25, local_need: 0.05 },
+};
+
+function urgencyDistanceScore(distKm: number, careType: string): number {
+  const buckets = URGENCY_DISTANCE_BUCKETS[careType] ?? URGENCY_DISTANCE_BUCKETS.specialist;
+  for (const [upper, score] of buckets) {
+    if (distKm <= upper) return score;
+  }
+  return 15;
+}
+
+/** Re-rank using w_distance = min(0.88, (u² + 2u + 13) / 140). */
+export function applyUrgencyReweighting(
+  candidates: ReferralCandidate[],
+  urgency: number,
+  careType: string
+): ReferralCandidate[] {
+  const u = Math.max(1, Math.min(10, urgency));
+  const wDist = Math.min(0.88, (u * u + 2 * u + 13) / 140);
+  const base = URGENCY_NONDIST_WEIGHTS[careType] ?? URGENCY_NONDIST_WEIGHTS.specialist;
+  const totalNondist = Object.values(base).reduce((a, b) => a + b, 0);
+  const remaining = 1 - wDist;
+
+  console.log(`[urgency] score=${u.toFixed(1)} w_distance=${wDist.toFixed(3)} care_type=${careType}`);
+
+  const adjusted = candidates.map((c) => {
+    const distKm = c.distance_km ?? 999;
+    const ds = urgencyDistanceScore(distKm, careType);
+    const cond = c.disease_match_score ?? 50;
+    const trust = c.baseline_trust_score ?? 50;
+    const evid = c.evidence_strength_score ?? 50;
+    const lneed = c.local_need_score ?? 50;
+
+    const urgencyScore =
+      Math.round(
+        Math.min(
+          100,
+          Math.max(
+            0,
+            wDist * ds +
+              (base.condition / totalNondist) * remaining * cond +
+              (base.trust / totalNondist) * remaining * trust +
+              (base.evidence / totalNondist) * remaining * evid +
+              (base.local_need / totalNondist) * remaining * lneed
+          )
+        ) * 10
+      ) / 10;
+
+    const priorFinal = c.final_recommendation_score ?? 0;
+    const feedbackDelta =
+      c.feedback_adjusted_score != null ? c.feedback_adjusted_score - priorFinal : null;
+
+    return {
+      ...c,
+      final_recommendation_score: urgencyScore,
+      feedback_adjusted_score:
+        feedbackDelta != null
+          ? Math.max(0, Math.min(100, urgencyScore + feedbackDelta))
+          : c.feedback_adjusted_score,
+    };
+  });
+
+  return adjusted
+    .sort(
+      (a, b) =>
+        (b.feedback_adjusted_score ?? b.final_recommendation_score ?? 0) -
+        (a.feedback_adjusted_score ?? a.final_recommendation_score ?? 0)
+    )
+    .map((c, i) => ({ ...c, rank: i + 1 }));
 }

@@ -31,6 +31,7 @@ export interface FacilityNode {
   facilityTypeId?: string | null;
   numberDoctors?: string | null;
   capacity?: string | null;
+  yearEstablished?: string | number | null;
 }
 
 export interface FacilitiesMeta {

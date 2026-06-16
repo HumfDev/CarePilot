@@ -1,0 +1,8 @@
+{
+  "extends": "./tsconfig.server.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "noEmit": true
+  },
+  "include": ["tests/**/*", "server/**/*", "shared/**/*", "scripts/smoke-referral-api.ts"]
+}

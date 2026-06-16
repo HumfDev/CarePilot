@@ -8,8 +8,8 @@
  * Genie is intentionally NOT depended on for ranking — it can be reattached
  * later as a secondary tab for ad-hoc data queries.
  */
-import { useEffect, useRef, useState } from 'react';
-import { AppBrand } from './AppBrand';
+import { ArrowUp, Mic, Plus } from 'lucide-react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import type { ChatMessage, UseReferralSearchReturn } from '../hooks/useReferralSearch';
 
 interface ReferralChatPanelProps {
@@ -24,11 +24,43 @@ const DEFAULT_EXAMPLES = [
   'cardiology near Mumbai',
 ];
 
+function UrgencyBadge({
+  urgency_score,
+  urgency_label,
+  department,
+}: {
+  urgency_score?: number;
+  urgency_label?: string;
+  department?: string;
+}) {
+  if (urgency_score == null) return null;
+
+  const color =
+    urgency_score >= 8
+      ? 'border-rose-200 bg-rose-50 text-rose-800'
+      : urgency_score >= 5
+        ? 'border-amber-200 bg-amber-50 text-amber-800'
+        : 'border-emerald-200 bg-emerald-50 text-emerald-800';
+
+  const dot =
+    urgency_score >= 8 ? 'bg-rose-500' : urgency_score >= 5 ? 'bg-amber-500' : 'bg-emerald-500';
+
+  return (
+    <div className={`flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs ${color}`}>
+      <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dot}`} />
+      <span className="font-medium">
+        Urgency {urgency_score}/10 · {urgency_label ?? 'Routine'}
+      </span>
+      {department ? <span className="text-neutral-500">· {department}</span> : null}
+    </div>
+  );
+}
+
 function MessageBubble({ message }: { message: ChatMessage }) {
   if (message.role === 'user') {
     return (
       <div className="flex justify-end">
-        <div className="max-w-[80%] rounded-2xl rounded-br-sm bg-indigo-600 px-3 py-2 text-sm text-white shadow-sm">
+        <div className="max-w-[80%] rounded-2xl rounded-br-sm bg-blue-600 px-3 py-2 text-sm text-white shadow-sm">
           {message.text}
         </div>
       </div>
@@ -54,6 +86,7 @@ export function ReferralChatPanel({ referral, exampleQueries }: ReferralChatPane
 
   const examples = exampleQueries ?? DEFAULT_EXAMPLES;
   const busy = referral.search.loading || referral.search.summarizing || !!referral.actionPending;
+  const showSuggestions = !referral.messages.some((m) => m.role === 'user');
 
   const submit = async () => {
     if (!draft.trim() || busy) return;
@@ -62,14 +95,17 @@ export function ReferralChatPanel({ referral, exampleQueries }: ReferralChatPane
     await referral.submitMessage(text);
   };
 
+  const submitSuggestion = (query: string) => {
+    void referral.submitMessage(query);
+  };
+
   return (
     <div className="flex h-full min-h-0 flex-col bg-white" data-testid="referral-chat-panel">
       <div className="shrink-0 border-b border-neutral-200 px-4 py-3">
-        <AppBrand variant="compact" />
-        <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-xs text-neutral-500">
             Evidence-aware ranking +{' '}
-            <span className="text-indigo-600">{referral.summarizerLabel}</span> summaries
+            <span className="text-blue-600">{referral.summarizerLabel}</span> summaries
           </p>
           <div className="inline-flex rounded-md border border-neutral-200 bg-neutral-50 p-0.5 text-[11px]">
             {referral.genieEnabled ? (
@@ -78,7 +114,7 @@ export function ReferralChatPanel({ referral, exampleQueries }: ReferralChatPane
                 onClick={() => referral.setSummarizer('genie')}
                 className={`rounded px-2 py-1 font-medium ${
                   referral.summarizer === 'genie'
-                    ? 'bg-white text-indigo-700 shadow-sm'
+                    ? 'bg-white text-blue-700 shadow-sm'
                     : 'text-neutral-600 hover:text-neutral-800'
                 }`}
                 data-testid="summarizer-genie"
@@ -91,7 +127,7 @@ export function ReferralChatPanel({ referral, exampleQueries }: ReferralChatPane
               onClick={() => referral.setSummarizer('llama')}
               className={`rounded px-2 py-1 font-medium ${
                 referral.summarizer === 'llama'
-                  ? 'bg-white text-indigo-700 shadow-sm'
+                  ? 'bg-white text-blue-700 shadow-sm'
                   : 'text-neutral-600 hover:text-neutral-800'
               }`}
               data-testid="summarizer-llama"
@@ -102,71 +138,97 @@ export function ReferralChatPanel({ referral, exampleQueries }: ReferralChatPane
         </div>
       </div>
 
+      {referral.urgencyInfo ? (
+        <div className="shrink-0 px-4 pt-2 pb-1">
+          <UrgencyBadge {...referral.urgencyInfo} />
+        </div>
+      ) : null}
       <div ref={scrollRef} className="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 py-4">
-        {referral.messages.map((m) => (
-          <MessageBubble key={m.id} message={m} />
+        {referral.messages.map((m, index) => (
+          <Fragment key={m.id}>
+            <MessageBubble message={m} />
+            {showSuggestions && index === 0 && m.role === 'assistant' ? (
+              <div className="flex flex-wrap gap-1 pt-1">
+                {examples.map((q) => (
+                  <button
+                    key={q}
+                    type="button"
+                    disabled={busy}
+                    onClick={() => submitSuggestion(q)}
+                    className="rounded-full border border-neutral-200 bg-white px-2.5 py-0.5 text-[11px] text-neutral-600 hover:bg-neutral-100 disabled:opacity-40"
+                  >
+                    {q}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </Fragment>
         ))}
         {referral.search.loading && (
           <div className="flex justify-start">
-            <div className="max-w-[60%] animate-pulse rounded-2xl rounded-bl-sm border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm text-neutral-500">
+            <div className="max-w-[60%] animate-pulse rounded-2xl rounded-bl-sm border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-500">
               Scoring candidates…
             </div>
           </div>
         )}
         {referral.search.summarizing && (
           <div className="flex justify-start">
-            <div className="max-w-[60%] animate-pulse rounded-2xl rounded-bl-sm border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm text-indigo-700">
+            <div className="max-w-[60%] animate-pulse rounded-2xl rounded-bl-sm border border-blue-500/30 bg-blue-500/10 px-3 py-2 text-sm text-blue-700">
               {referral.summarizerLabel} is thinking…
             </div>
           </div>
         )}
         {referral.search.error && (
-          <div className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+          <div className="rounded-md border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-700">
             {referral.search.error}
           </div>
         )}
       </div>
 
       <div className="shrink-0 space-y-2 border-t border-neutral-200 px-4 py-3">
-        <div className="flex flex-wrap gap-1">
-          {examples.map((q) => (
-            <button
-              key={q}
-              type="button"
-              disabled={busy}
-              onClick={() => {
-                void referral.submitMessage(q);
-              }}
-              className="rounded-full border border-neutral-200 bg-neutral-50 px-2.5 py-0.5 text-[11px] text-neutral-600 hover:bg-neutral-100 disabled:opacity-40"
-            >
-              {q}
-            </button>
-          ))}
-        </div>
         <form
           onSubmit={(e) => {
             e.preventDefault();
             void submit();
           }}
-          className="flex gap-2"
+          className="flex items-center gap-2"
         >
-          <input
-            type="text"
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            placeholder='Try "dialysis near Jaipur"'
-            className="flex-1 rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-indigo-400 focus:outline-none"
-            disabled={busy}
-          />
+          <div className="flex min-w-0 flex-1 items-center rounded-full border border-neutral-200 bg-neutral-50 px-1 py-1 shadow-sm">
+            <button
+              type="button"
+              disabled={busy}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 disabled:opacity-40"
+              aria-label="Add attachment"
+            >
+              <Plus className="h-4 w-4" />
+            </button>
+            <input
+              type="text"
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              placeholder='Try "dialysis near Jaipur"'
+              className="min-w-0 flex-1 border-0 bg-transparent px-1 py-1.5 text-sm text-neutral-900 placeholder:text-neutral-400 outline-none ring-0 focus:outline-none focus:ring-0 focus-visible:outline-none"
+              disabled={busy}
+            />
+            <button
+              type="button"
+              disabled={busy}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 disabled:opacity-40"
+              aria-label="Voice input"
+            >
+              <Mic className="h-4 w-4" />
+            </button>
+          </div>
           <button
             type="submit"
             disabled={busy || !draft.trim()}
-            className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-40"
+            aria-label="Send message"
           >
-            Send
+            <ArrowUp className="h-4 w-4" strokeWidth={2.5} />
           </button>
         </form>
-        <p className="text-[10px] text-neutral-500">
+        <p className="text-[10px] text-neutral-400">
           Not medical advice — verify with a phone call or official website before referral.
         </p>
       </div>

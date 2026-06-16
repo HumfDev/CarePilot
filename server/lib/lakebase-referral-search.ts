@@ -1,6 +1,7 @@
 import { LB } from './lakebase-tables';
 import {
   applyFeedbackReranking,
+  applyUrgencyReweighting,
   rankFacilityRows,
   type FacilityRow,
   type SearchScoreInput,
@@ -102,6 +103,7 @@ export async function searchReferralCandidatesLakebase(
   input: SearchScoreInput & {
     location_text?: string | null;
     use_feedback_reranking?: boolean;
+    urgency_score?: number;
   }
 ): Promise<{ scenario_id: string; feedback_applied: boolean; candidates: ReferralCandidate[] }> {
   const latPad = input.max_distance_km / 111;
@@ -149,6 +151,15 @@ export async function searchReferralCandidatesLakebase(
     if (hasFeedback) {
       candidates = applyFeedbackReranking(candidates, feedback).map((c, i) => ({ ...c, rank: i + 1 }));
       feedbackApplied = true;
+    }
+  }
+
+  if (input.urgency_score != null) {
+    try {
+      candidates = applyUrgencyReweighting(candidates, input.urgency_score, input.care_type);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn('[lakebase-referral-search] urgency re-weighting failed, using original ranking:', message);
     }
   }
 
