@@ -23,7 +23,9 @@
     "typegen": "appkit generate-types",
     "setup": "appkit setup --write",
     "sync:bundle-vars": "node scripts/sync-bundle-vars.mjs",
-    "deploy": "npm run sync:bundle-vars && databricks bundle deploy && databricks bundle run app"
+    "discover:hackathon": "node scripts/discover-hackathon.mjs",
+    "deploy": "npm run sync:bundle-vars && databricks bundle deploy && databricks bundle run app",
+    "deploy:hackathon": "npm run build && databricks bundle deploy --target hackathon --profile hackathon && databricks apps deploy carepliots --profile hackathon --auto-approve"
   },
   "keywords": [],
   "author": "",
