@@ -1,9 +1,9 @@
 import type { MockRoute, TrafficLevel } from '../types/route';
 
 const TRAFFIC_TONE: Record<TrafficLevel, { dot: string; label: string; badge: string }> = {
-  Light: { dot: 'bg-emerald-400', label: 'text-emerald-300', badge: 'bg-emerald-500/15 ring-emerald-500/30' },
-  Moderate: { dot: 'bg-amber-400', label: 'text-amber-300', badge: 'bg-amber-500/15 ring-amber-500/30' },
-  Heavy: { dot: 'bg-rose-400', label: 'text-rose-300', badge: 'bg-rose-500/15 ring-rose-500/30' },
+  Light: { dot: 'bg-emerald-500', label: 'text-emerald-700', badge: 'bg-emerald-500/15 ring-emerald-500/30' },
+  Moderate: { dot: 'bg-amber-500', label: 'text-amber-700', badge: 'bg-amber-500/15 ring-amber-500/30' },
+  Heavy: { dot: 'bg-rose-500', label: 'text-rose-700', badge: 'bg-rose-500/15 ring-rose-500/30' },
 };
 
 interface MockRouteSummaryProps {
@@ -15,18 +15,18 @@ interface MockRouteSummaryProps {
 export function MockRouteSummary({ route, onClear }: MockRouteSummaryProps) {
   const tone = TRAFFIC_TONE[route.traffic_level];
   return (
-    <div className="rounded-lg border border-neutral-800 bg-neutral-950/90 px-4 py-3 text-[11px] text-neutral-200 shadow-lg backdrop-blur-sm">
+    <div className="rounded-lg border border-neutral-200 bg-white/90 px-4 py-3 text-[11px] text-neutral-700 shadow-lg backdrop-blur-sm">
       <div className="flex items-start justify-between gap-2">
         <div>
           <div className="text-[10px] font-semibold uppercase tracking-wide text-neutral-500">
             Simulated route · demo only
           </div>
-          <div className="text-sm font-semibold text-white">{route.facility_name}</div>
+          <div className="text-sm font-semibold text-neutral-900">{route.facility_name}</div>
         </div>
         <button
           type="button"
           onClick={onClear}
-          className="rounded-md border border-neutral-700 px-2 py-0.5 text-[10px] text-neutral-300 hover:bg-neutral-800"
+          className="rounded-md border border-neutral-300 px-2 py-0.5 text-[10px] text-neutral-600 hover:bg-neutral-100"
         >
           Hide route
         </button>
@@ -34,7 +34,7 @@ export function MockRouteSummary({ route, onClear }: MockRouteSummaryProps) {
       <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 sm:grid-cols-4">
         <div>
           <dt className="text-neutral-500">ETA</dt>
-          <dd className="font-semibold text-white">{route.eta_minutes.toFixed(0)} min</dd>
+          <dd className="font-semibold text-neutral-900">{route.eta_minutes.toFixed(0)} min</dd>
         </div>
         <div>
           <dt className="text-neutral-500">Distance</dt>

@@ -142,7 +142,7 @@ function RankedCandidateMarkers({
                     {candidate.evidence_snippets[0].text.length > 140 ? '…' : ''}”
                   </div>
                 ) : null}
-                <div className="mt-1 text-[10px] text-indigo-300">Open from ranked list for details</div>
+                <div className="mt-1 text-[10px] text-blue-600">Open from ranked list for details</div>
               </div>
             </Tooltip>
           </Marker>
@@ -157,7 +157,7 @@ function UserLocationMarker({ lat, lon }: { lat: number; lon: number }) {
     <CircleMarker
       center={[lat, lon]}
       radius={6}
-      pathOptions={{ color: '#FFFFFF', weight: 2, fillColor: '#6366F1', fillOpacity: 0.95 }}
+      pathOptions={{ color: '#FFFFFF', weight: 2, fillColor: '#007AFF', fillOpacity: 0.95 }}
     >
       <Tooltip permanent direction="top" offset={[0, -8]}>
         You / search origin
@@ -272,13 +272,13 @@ function ScoreLegend({ hasScores, hidden }: { hasScores: boolean; hidden?: boole
   return (
     <div className="absolute right-3 top-3 z-[1000]">
       {open ? (
-        <div className="rounded-md border border-neutral-800 bg-neutral-950/85 px-2.5 py-2 text-[10px] text-neutral-300 backdrop-blur-sm">
+        <div className="rounded-md border border-neutral-200 bg-white/85 px-2.5 py-2 text-[10px] text-neutral-600 backdrop-blur-sm">
           <div className="mb-1 flex items-center justify-between gap-2">
-            <span className="font-semibold uppercase tracking-wide text-neutral-400">Trust score (v4)</span>
+            <span className="font-semibold uppercase tracking-wide text-neutral-500">Trust score (v4)</span>
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="rounded border border-neutral-700 px-1 text-[9px] text-neutral-400 hover:bg-neutral-800"
+              className="rounded border border-neutral-300 px-1 text-[9px] text-neutral-500 hover:bg-neutral-100"
               aria-label="Hide trust score legend"
             >
               Hide
@@ -310,7 +310,7 @@ function ScoreLegend({ hasScores, hidden }: { hasScores: boolean; hidden?: boole
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="rounded-md border border-neutral-800 bg-neutral-950/85 px-2 py-1 text-[10px] text-neutral-400 backdrop-blur-sm hover:bg-neutral-900"
+          className="rounded-md border border-neutral-200 bg-white/85 px-2 py-1 text-[10px] text-neutral-500 backdrop-blur-sm hover:bg-neutral-50"
         >
           Trust score legend
         </button>
@@ -320,7 +320,7 @@ function ScoreLegend({ hasScores, hidden }: { hasScores: boolean; hidden?: boole
 }
 
 const ROUTE_POLYLINE_OPTIONS = {
-  color: '#6366F1',
+  color: '#007AFF',
   weight: 4,
   opacity: 0.85,
   dashArray: '6 4',
@@ -464,16 +464,16 @@ export function IndiaMapPanel({
   const mapReady = !loading && !error && indiaBoundary && facilities.length > 0;
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-neutral-950" data-testid="india-map-panel">
-      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-neutral-800 px-4 py-3">
+    <div className="flex h-full min-h-0 flex-col bg-white" data-testid="india-map-panel">
+      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-neutral-200 px-4 py-3">
         <div>
-          <h2 className="text-sm font-semibold text-white">India Healthcare Map</h2>
+          <h2 className="text-sm font-semibold text-neutral-900">India Healthcare Map</h2>
           <p className="text-xs text-neutral-500">
             {locationPickMode
               ? 'Click inside India to set your planner location.'
               : hasCandidates
                 ? 'Ranked referral candidates — set my location for route ETA.'
-                : 'Click twice to route between nearest facilities (Dijkstra)'}
+                : 'Click twice to route between nearest facilities'}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -481,21 +481,21 @@ export function IndiaMapPanel({
             type="button"
             onClick={swapPoints}
             disabled={!start || !end}
-            className="rounded-md border border-neutral-700 px-2 py-1 text-xs text-neutral-300 hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-md border border-neutral-300 px-2 py-1 text-xs text-neutral-600 hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-40"
           >
             Swap
           </button>
           <button
             type="button"
             onClick={clearRoute}
-            className="rounded-md border border-neutral-700 px-2 py-1 text-xs text-neutral-300 hover:bg-neutral-800"
+            className="rounded-md border border-neutral-300 px-2 py-1 text-xs text-neutral-600 hover:bg-neutral-100"
           >
             Clear
           </button>
         </div>
       </div>
 
-      <div className="shrink-0 border-b border-neutral-800 px-4 py-2 text-xs text-neutral-400">
+      <div className="shrink-0 border-b border-neutral-200 px-4 py-2 text-xs text-neutral-500">
         {loading && 'Loading facilities…'}
         {error && `Facility error: ${error}. Using fallback data if available.`}
         {boundaryError && `Boundary error: ${boundaryError}`}
@@ -511,7 +511,7 @@ export function IndiaMapPanel({
           selectionStep === 'end' &&
           'Click the map to select a destination facility.'}
         {route && (
-          <span className="ml-2 text-neutral-300">
+          <span className="ml-2 text-neutral-700">
             Distance: {route.distanceKm.toFixed(1)} km · Stops: {route.path.length}
           </span>
         )}
@@ -596,14 +596,14 @@ export function IndiaMapPanel({
         )}
         {mockRouteLoading && !activeMockRoute ? (
           <div className="pointer-events-none absolute left-3 top-3 z-[1000] max-w-md">
-            <div className="pointer-events-auto rounded-lg border border-neutral-800 bg-neutral-950/90 px-4 py-3 text-[11px] text-neutral-400 shadow-lg backdrop-blur-sm animate-pulse">
+            <div className="pointer-events-auto rounded-lg border border-neutral-200 bg-white/90 px-4 py-3 text-[11px] text-neutral-500 shadow-lg backdrop-blur-sm animate-pulse">
               Calculating simulated ETA…
             </div>
           </div>
         ) : null}
         {mockRouteError ? (
           <div className="pointer-events-none absolute left-3 top-3 z-[1000] max-w-md">
-            <div className="pointer-events-auto rounded-lg border border-rose-500/30 bg-neutral-950/90 px-4 py-3 text-[11px] text-rose-300 shadow-lg backdrop-blur-sm">
+            <div className="pointer-events-auto rounded-lg border border-rose-500/30 bg-white/90 px-4 py-3 text-[11px] text-rose-700 shadow-lg backdrop-blur-sm">
               {mockRouteError}
             </div>
           </div>

@@ -42,20 +42,10 @@ export function ChatPage() {
   const routeFacilityId = mockRoute.activeFacilityId ?? mockRoute.route?.facility_id ?? null;
 
   return (
-    <div className="flex h-screen flex-col bg-black text-white">
-      <header className="flex shrink-0 items-center justify-between border-b border-neutral-800 bg-black px-6 py-3">
-        <div className="flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full bg-red-600" aria-hidden="true" />
-          <span className="text-sm font-medium text-white">CarePilot Referral Copilot</span>
-        </div>
-        <span className="text-[10px] font-medium uppercase tracking-widest text-neutral-500">
-          Evidence-aware · Planner-facing · Not medical advice
-        </span>
-      </header>
-
-      <main className="min-h-0 flex-1 bg-black">
+    <div className="flex h-screen flex-col bg-white text-neutral-900">
+      <main className="min-h-0 flex-1 bg-white">
         <PanelGroup direction="horizontal" className="h-full w-full">
-          <Panel defaultSize={62} minSize={35}>
+          <Panel defaultSize={72} minSize={35}>
             {/* Phase 1: map on top, compact ranked list inside the same left panel. */}
             <PanelGroup direction="vertical" className="h-full w-full">
               <Panel defaultSize={referral.candidates.length ? 65 : 100} minSize={40}>
@@ -74,9 +64,9 @@ export function ChatPage() {
               </Panel>
               {referral.candidates.length > 0 ? (
                 <>
-                  <PanelResizeHandle className="h-1 bg-neutral-800 transition-colors hover:bg-neutral-600" />
+                  <PanelResizeHandle className="h-1 bg-neutral-200 transition-colors hover:bg-neutral-300" />
                   <Panel defaultSize={35} minSize={15}>
-                    <div className="flex h-full min-h-0 flex-col bg-neutral-950">
+                    <div className="flex h-full min-h-0 flex-col bg-white">
                       <ReferralCandidateList
                         candidates={referral.candidates}
                         selectedCandidateId={referral.selectedCandidateId}
@@ -95,8 +85,8 @@ export function ChatPage() {
               ) : null}
             </PanelGroup>
           </Panel>
-          <PanelResizeHandle className="w-1 bg-neutral-800 transition-colors hover:bg-neutral-600" />
-          <Panel defaultSize={38} minSize={25}>
+          <PanelResizeHandle className="w-1 bg-neutral-200 transition-colors hover:bg-neutral-300" />
+          <Panel defaultSize={28} minSize={22} className="min-h-0">
             <ReferralChatPanel referral={referral} />
           </Panel>
         </PanelGroup>
