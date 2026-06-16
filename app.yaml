@@ -1,18 +1,6 @@
-command:
-  - "streamlit"
-  - "run"
-  - "app.py"
-  - "--server.port"
-  - "8000"
-  - "--server.address"
-  - "0.0.0.0"
-  - "--server.headless"
-  - "true"
-  - "--server.enableCORS"
-  - "false"
-  - "--server.enableXsrfProtection"
-  - "false"
-
+command: ['npm', 'run', 'start']
 env:
-  - name: DATABRICKS_WAREHOUSE_ID
-    value: ""  # TODO: replace with your SQL warehouse ID
+  - name: LAKEBASE_ENDPOINT
+    valueFrom: postgres
+  - name: DATABRICKS_ENDPOINT
+    value: 'databricks-gpt-5-4-mini'
