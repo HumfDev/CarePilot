@@ -18,6 +18,8 @@ variables:
     description: CarePilot Genie space ID for healthcare data queries
   genie_space_name:
     description: CarePilot Genie space display name
+  sql_warehouse_id:
+    description: SQL warehouse used by Genie (Serverless Starter Warehouse)
 
 resources:
   apps:
@@ -42,6 +44,10 @@ resources:
             name: ${var.genie_space_name}
             space_id: ${var.genie_space_id}
             permission: CAN_RUN
+        - name: sql-warehouse
+          sql_warehouse:
+            id: ${var.sql_warehouse_id}
+            permission: CAN_USE
 
 targets:
   default:
@@ -51,3 +57,4 @@ targets:
       postgres_database: projects/carepilot-db/branches/production/databases/databricks-postgres
       genie_space_id: 01f16954e5791df78bb099133a0041be
       genie_space_name: CarePilot Healthcare Data
+      sql_warehouse_id: b2bb07abff382b79

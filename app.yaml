@@ -4,3 +4,5 @@ env:
     valueFrom: postgres
   - name: DATABRICKS_GENIE_SPACE_ID
     valueFrom: genie-space
+  - name: DATABRICKS_WAREHOUSE_ID
+    valueFrom: sql-warehouse
