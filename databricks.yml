@@ -30,8 +30,6 @@ resources:
         - dashboards.genie
         - sql
         - postgres
-        - iam.current-user:read
-        - iam.access-control:read
       source_code_path: ./
       resources:
         - name: postgres
