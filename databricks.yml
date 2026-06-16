@@ -26,6 +26,9 @@ resources:
       description: 'Streaming AI chat with Model Serving and Lakebase-persisted chat history'
       user_api_scopes:
         - dashboards.genie
+        - sql
+        - iam.current-user:read
+        - iam.access-control:read
       source_code_path: ./
       resources:
         - name: postgres
