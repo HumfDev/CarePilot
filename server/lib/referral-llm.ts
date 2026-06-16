@@ -5,7 +5,7 @@ import {
   genieReferralReady,
   type GenieReferralClient,
 } from './referral-genie';
-import { DEFAULT_LLM_MODEL, useGenieForReferral } from './runtime-config';
+import { DEFAULT_LLM_MODEL, DEFAULT_REFERRAL_SUMMARIZER, type ReferralSummarizerChoice } from './runtime-config';
 import type { ReferralCandidate } from '../../shared/referral';
 import { getCachedSummary, payloadHash, saveCachedSummary } from './lakebase-referral-store';
 
@@ -24,6 +24,7 @@ interface LakebaseQueryable {
 
 export interface ReferralLlmContext {
   genie?: GenieReferralClient | null;
+  summarizer?: ReferralSummarizerChoice;
 }
 
 async function invokeReferralText(
@@ -33,8 +34,9 @@ async function invokeReferralText(
   serving: { model?: string; maxTokens?: number; temperature?: number }
 ): Promise<{ text: string; engine: 'genie' | 'model_serving'; model: string }> {
   const model = serving.model ?? DEFAULT_LLM_MODEL;
+  const summarizer = ctx?.summarizer ?? DEFAULT_REFERRAL_SUMMARIZER;
 
-  if (genieReferralReady(ctx?.genie)) {
+  if (summarizer === 'genie' && genieReferralReady(ctx?.genie, summarizer)) {
     try {
       const text = await askGenieText(ctx.genie, formatGeniePrompt(system, user), {
         timeout: 90_000,
@@ -191,6 +193,6 @@ export async function answerReferralFollowUp(
   return { reply: text, engine, model: usedModel };
 }
 
-export function referralSummarizerLabel(): string {
-  return useGenieForReferral() ? 'genie' : 'model_serving';
+export function referralSummarizerLabel(summarizer: ReferralSummarizerChoice = DEFAULT_REFERRAL_SUMMARIZER): ReferralSummarizerChoice {
+  return summarizer;
 }

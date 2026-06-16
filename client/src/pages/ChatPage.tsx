@@ -113,6 +113,8 @@ export function ChatPage() {
         scenarioId={referral.scenarioId}
         careNeed={referral.searchParams?.care_need ?? null}
         careType={referral.searchParams?.care_type ?? null}
+        summarizer={referral.summarizer}
+        llamaModel={referral.llamaModel}
         onClose={referral.clearSelection}
         onShortlist={referral.saveShortlist}
         onSaveNote={referral.saveNote}

@@ -19,13 +19,16 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReferralCandidate, ReviewDecision } from '../types/referral';
-import { DEFAULT_SUMMARIZER_LABEL } from '../hooks/useReferralSearch';
+import type { ReferralSummarizer } from '../types/referral';
+import { DEFAULT_SUMMARIZER_LABEL, summarizerDisplayName } from '../hooks/useReferralSearch';
 
 interface ReferralCandidateCardProps {
   candidate: ReferralCandidate | null;
   scenarioId: string | null;
   careNeed: string | null;
   careType: string | null;
+  summarizer: ReferralSummarizer;
+  llamaModel?: string;
   onClose: () => void;
   onShortlist: (c: ReferralCandidate) => Promise<void> | void;
   onSaveNote: (c: ReferralCandidate, note: string) => Promise<void> | void;
@@ -73,17 +76,23 @@ function CandidateAiSummary({
   scenarioId,
   careNeed,
   careType,
+  summarizer,
+  llamaModel,
 }: {
   candidate: ReferralCandidate;
   scenarioId: string | null;
   careNeed: string | null;
   careType: string | null;
+  summarizer: ReferralSummarizer;
+  llamaModel?: string;
 }) {
   const [summary, setSummary] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cached, setCached] = useState(false);
-  const [engine, setEngine] = useState(DEFAULT_SUMMARIZER_LABEL);
+  const [engineLabel, setEngineLabel] = useState(
+    summarizerDisplayName(summarizer, llamaModel ?? DEFAULT_SUMMARIZER_LABEL)
+  );
 
   const load = useCallback(
     async (force = false) => {
@@ -99,6 +108,7 @@ function CandidateAiSummary({
             candidate,
             care_need: careNeed,
             care_type: careType ?? 'specialist',
+            summarizer,
             force_regenerate: force,
           }),
         });
@@ -107,6 +117,7 @@ function CandidateAiSummary({
           summary?: string;
           cached?: boolean;
           engine?: string;
+          model?: string;
           error?: string;
         };
         if (!data.ok || !data.summary) {
@@ -116,25 +127,29 @@ function CandidateAiSummary({
         }
         setSummary(data.summary);
         setCached(!!data.cached);
-        setEngine(data.engine === 'genie' ? 'Genie' : data.engine ?? DEFAULT_SUMMARIZER_LABEL);
+        setEngineLabel(
+          data.engine === 'genie'
+            ? 'Genie'
+            : summarizerDisplayName('llama', data.model ?? llamaModel)
+        );
       } catch (err) {
         setError(err instanceof Error ? err.message : 'AI summary request failed.');
       } finally {
         setLoading(false);
       }
     },
-    [candidate, scenarioId, careNeed, careType]
+    [candidate, scenarioId, careNeed, careType, summarizer, llamaModel]
   );
 
   useEffect(() => {
     void load();
-  }, [load]);
+  }, [load, summarizer]);
 
   return (
     <section className="rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3">
       <div className="mb-2 flex items-center justify-between gap-2">
         <h3 className="text-[10px] font-semibold uppercase tracking-wide text-indigo-700">
-          AI card summary · {engine}
+          AI card summary · {engineLabel}
         </h3>
         <button
           type="button"
@@ -148,7 +163,7 @@ function CandidateAiSummary({
         </button>
       </div>
       {loading ? (
-        <p className="animate-pulse text-xs text-indigo-600">Genie is thinking…</p>
+        <p className="animate-pulse text-xs text-indigo-600">{engineLabel} is thinking…</p>
       ) : error ? (
         <p className="text-xs text-rose-600">{error}</p>
       ) : summary ? (
@@ -225,6 +240,8 @@ function ReferralCandidateCardInner({
   scenarioId,
   careNeed,
   careType,
+  summarizer,
+  llamaModel,
   onClose,
   onShortlist,
   onSaveNote,
@@ -311,7 +328,14 @@ function ReferralCandidateCardInner({
 
         {/* Body */}
         <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-4 text-sm">
-          <CandidateAiSummary candidate={candidate} scenarioId={scenarioId} careNeed={careNeed} careType={careType} />
+          <CandidateAiSummary
+            candidate={candidate}
+            scenarioId={scenarioId}
+            careNeed={careNeed}
+            careType={careType}
+            summarizer={summarizer}
+            llamaModel={llamaModel}
+          />
 
           {/* Scores */}
           <section>

@@ -1,4 +1,5 @@
-import { GENIE_REFERRAL_ALIAS, useGenieForReferral } from './runtime-config';
+import { GENIE_REFERRAL_ALIAS, isGenieEnabled } from './runtime-config';
+import type { ReferralSummarizerChoice } from './runtime-config';
 
 /** Minimal Genie plugin surface used by referral summarization. */
 export interface GenieReferralClient {
@@ -39,8 +40,11 @@ export async function askGenieText(
   return text;
 }
 
-export function genieReferralReady(genie: GenieReferralClient | null | undefined): genie is GenieReferralClient {
-  return Boolean(genie) && useGenieForReferral();
+export function genieReferralReady(
+  genie: GenieReferralClient | null | undefined,
+  summarizer: ReferralSummarizerChoice = 'genie'
+): genie is GenieReferralClient {
+  return summarizer === 'genie' && Boolean(genie) && isGenieEnabled();
 }
 
 export function formatGeniePrompt(system: string, user: string): string {

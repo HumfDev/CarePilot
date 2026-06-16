@@ -20,13 +20,12 @@ import { parseReferralMessage } from '../lib/referral-parse';
 import {
   answerReferralFollowUp,
   classifyReferralIntent,
-  referralSummarizerLabel,
   summarizeCandidateCard,
   summarizeSearchResults,
   type ReferralLlmContext,
 } from '../lib/referral-llm';
 import { type GenieReferralClient } from '../lib/referral-genie';
-import { isGenieEnabled, useLakebaseReferral, usePythonBridge } from '../lib/runtime-config';
+import { isGenieEnabled, parseReferralSummarizer, useLakebaseReferral, usePythonBridge, DEFAULT_LLM_MODEL, DEFAULT_REFERRAL_SUMMARIZER } from '../lib/runtime-config';
 
 interface LakebaseQueryable {
   query(text: string, params?: unknown[]): Promise<{ rows: Record<string, unknown>[] }>;
@@ -76,7 +75,14 @@ async function callBridge(res: Response, op: Parameters<typeof callPythonBridge>
 }
 
 export function setupReferralRoutes(appkit: AppKitWithReferral) {
-  const llmCtx: ReferralLlmContext = { genie: appkit.genie ?? null };
+  const baseLlmCtx: ReferralLlmContext = { genie: appkit.genie ?? null };
+
+  function buildLlmCtx(body: Record<string, unknown>): ReferralLlmContext {
+    return {
+      ...baseLlmCtx,
+      summarizer: parseReferralSummarizer(body.summarizer),
+    };
+  }
 
   appkit.server.extend((app) => {
     app.get('/api/referral/status', async (_req, res) => {
@@ -92,7 +98,9 @@ export function setupReferralRoutes(appkit: AppKitWithReferral) {
       res.json({
         ok: true,
         engine: lakebaseReady(appkit) ? 'lakebase_sql' : usePythonBridge() ? 'python_bridge' : 'unconfigured',
-        summarizer: referralSummarizerLabel(),
+        summarizer_default: DEFAULT_REFERRAL_SUMMARIZER,
+        summarizer_options: isGenieEnabled() ? (['genie', 'llama'] as const) : (['llama'] as const),
+        llama_model: DEFAULT_LLM_MODEL,
         genie_enabled: isGenieEnabled(),
         local_demo: process.env.CAREPILOT_LOCAL_DEMO === '1',
         data_ready,
@@ -299,7 +307,7 @@ export function setupReferralRoutes(appkit: AppKitWithReferral) {
             care_type: typeof body.care_type === 'string' ? body.care_type : undefined,
             model: typeof body.model === 'string' ? body.model : undefined,
           },
-          llmCtx
+          buildLlmCtx(body)
         );
         res.json({
           ok: true,
@@ -330,7 +338,7 @@ export function setupReferralRoutes(appkit: AppKitWithReferral) {
             feedback_applied: Boolean(body.feedback_applied),
             model: typeof body.model === 'string' ? body.model : undefined,
           },
-          llmCtx
+          buildLlmCtx(body)
         );
         res.json({ ok: true, summary: result.summary, engine: result.engine, model: result.model });
       } catch (err) {
@@ -355,7 +363,7 @@ export function setupReferralRoutes(appkit: AppKitWithReferral) {
             feedback_applied: Boolean(body.feedback_applied),
             model: typeof body.model === 'string' ? body.model : undefined,
           },
-          llmCtx
+          buildLlmCtx(body)
         );
         res.json({ ok: true, reply: result.reply, engine: result.engine, model: result.model });
       } catch (err) {
@@ -381,7 +389,7 @@ export function setupReferralRoutes(appkit: AppKitWithReferral) {
               typeof body.top_facility_name === 'string' ? body.top_facility_name : undefined,
             model: typeof body.model === 'string' ? body.model : undefined,
           },
-          llmCtx
+          buildLlmCtx(body)
         );
         res.json({ ok: true, intent });
       } catch (err) {

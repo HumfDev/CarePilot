@@ -3,6 +3,11 @@
  * Lakebase SQL scoring returns the same ReferralCandidate contract.
  */
 
+/** User-selected engine for referral summaries and follow-ups. */
+export type ReferralSummarizer = 'genie' | 'llama';
+
+export const DEFAULT_REFERRAL_SUMMARIZER: ReferralSummarizer = 'genie';
+
 export type RankingPriority = 'prioritize_evidence' | 'prioritize_trust' | 'prioritize_distance';
 
 export interface ReferralSearchParams {

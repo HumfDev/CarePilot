@@ -28,6 +28,15 @@ export function useGenieForReferral(): boolean {
   return true;
 }
 
+export type ReferralSummarizerChoice = 'genie' | 'llama';
+
+export function parseReferralSummarizer(value: unknown): ReferralSummarizerChoice {
+  if (value === 'llama' || value === 'model_serving') return 'llama';
+  return 'genie';
+}
+
+export const DEFAULT_REFERRAL_SUMMARIZER: ReferralSummarizerChoice = 'genie';
+
 export const GENIE_REFERRAL_ALIAS = process.env.CAREPILOT_GENIE_REFERRAL_ALIAS ?? 'healthcare';
 
 /** Primary referral path: Lakebase SQL + TypeScript scoring. */

@@ -12,14 +12,16 @@
  *   - saveShortlist / saveNote / setReview / setOverride
  *                           — wrappers around the persistence endpoints
  */
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type {
   ReferralCandidate,
   ReferralParseResponse,
   ReferralSearchParams,
   ReferralSearchResponse,
+  ReferralSummarizer,
   ReviewDecision,
 } from '../types/referral';
+import { DEFAULT_REFERRAL_SUMMARIZER } from '../types/referral';
 
 export type ChatRole = 'user' | 'assistant' | 'system';
 
@@ -45,10 +47,30 @@ interface SearchActionState {
 /** Default summarizer label shown in the UI when status has not loaded yet. */
 export const DEFAULT_SUMMARIZER_LABEL = 'Genie';
 
+const SUMMARIZER_STORAGE_KEY = 'carepilot:referral-summarizer';
+
+function loadStoredSummarizer(): ReferralSummarizer {
+  try {
+    const stored = localStorage.getItem(SUMMARIZER_STORAGE_KEY);
+    if (stored === 'llama' || stored === 'genie') return stored;
+  } catch {
+    // ignore
+  }
+  return DEFAULT_REFERRAL_SUMMARIZER;
+}
+
+export function summarizerDisplayName(
+  summarizer: ReferralSummarizer,
+  llamaModel = 'Llama 4 Maverick'
+): string {
+  return summarizer === 'genie' ? 'Genie' : llamaModel.replace(/^databricks-/, '').replace(/-/g, ' ');
+}
+
 async function fetchSearchSummary(
   params: ReferralSearchParams,
   candidates: ReferralCandidate[],
-  feedbackApplied: boolean
+  feedbackApplied: boolean,
+  summarizer: ReferralSummarizer
 ): Promise<{ text: string | null; engine: string }> {
   try {
     const res = await postJSON<{ ok: boolean; summary?: string; engine?: string; error?: string }>(
@@ -59,6 +81,7 @@ async function fetchSearchSummary(
         location_text: params.location_text,
         candidates,
         feedback_applied: feedbackApplied,
+        summarizer,
       }
     );
     if (res.ok && res.summary) {
@@ -134,7 +157,8 @@ async function postJSON<T>(path: string, body: unknown): Promise<T> {
 async function fetchMessageIntent(
   message: string,
   params: ReferralSearchParams,
-  candidates: ReferralCandidate[]
+  candidates: ReferralCandidate[],
+  summarizer: ReferralSummarizer
 ): Promise<'new_search' | 'follow_up' | null> {
   try {
     const res = await postJSON<{ ok: boolean; intent?: 'new_search' | 'follow_up' }>(
@@ -146,6 +170,7 @@ async function fetchMessageIntent(
         location_text: params.location_text,
         candidate_count: candidates.length,
         top_facility_name: candidates[0]?.facility_name ?? null,
+        summarizer,
       }
     );
     if (res.ok && res.intent) return res.intent;
@@ -159,7 +184,8 @@ async function fetchFollowupReply(
   message: string,
   params: ReferralSearchParams,
   candidates: ReferralCandidate[],
-  feedbackApplied: boolean
+  feedbackApplied: boolean,
+  summarizer: ReferralSummarizer
 ): Promise<{ text: string | null; engine: string }> {
   try {
     const res = await postJSON<{ ok: boolean; reply?: string; engine?: string }>('/api/referral/chat', {
@@ -169,6 +195,7 @@ async function fetchFollowupReply(
       location_text: params.location_text,
       candidates,
       feedback_applied: feedbackApplied,
+      summarizer,
     });
     if (res.ok && res.reply) {
       return { text: res.reply, engine: res.engine ?? 'genie' };
@@ -205,6 +232,43 @@ export function useReferralSearch(options: UseReferralSearchOptions = {}) {
     error: null,
   });
   const [actionPending, setActionPending] = useState<string | null>(null);
+  const [summarizer, setSummarizerState] = useState<ReferralSummarizer>(() => loadStoredSummarizer());
+  const [genieEnabled, setGenieEnabled] = useState(true);
+  const [llamaModel, setLlamaModel] = useState('databricks-llama-4-maverick');
+
+  useEffect(() => {
+    void fetch('/api/referral/status')
+      .then((r) => r.json())
+      .then(
+        (data: {
+          genie_enabled?: boolean;
+          llama_model?: string;
+        }) => {
+          if (typeof data.genie_enabled === 'boolean') setGenieEnabled(data.genie_enabled);
+          if (typeof data.llama_model === 'string') setLlamaModel(data.llama_model);
+          if (data.genie_enabled === false) {
+            setSummarizerState((current) => (current === 'genie' ? 'llama' : current));
+          }
+        }
+      )
+      .catch(() => {
+        // local demo may not expose status fully
+      });
+  }, []);
+
+  const setSummarizer = useCallback((next: ReferralSummarizer) => {
+    setSummarizerState(next);
+    try {
+      localStorage.setItem(SUMMARIZER_STORAGE_KEY, next);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const summarizerLabel = useMemo(
+    () => summarizerDisplayName(summarizer, llamaModel),
+    [summarizer, llamaModel]
+  );
 
   const appendMessage = useCallback((message: Omit<ChatMessage, 'id' | 'createdAt'>) => {
     setMessages((prev) => [...prev, { ...message, id: newId('msg'), createdAt: Date.now() }]);
@@ -214,7 +278,7 @@ export function useReferralSearch(options: UseReferralSearchOptions = {}) {
     async (text: string): Promise<void> => {
       if (!searchParams || candidates.length === 0) return;
       setSearch((prev) => ({ ...prev, summarizing: true, error: null }));
-      const reply = await fetchFollowupReply(text, searchParams, candidates, feedbackApplied);
+      const reply = await fetchFollowupReply(text, searchParams, candidates, feedbackApplied, summarizer);
       appendMessage({
         role: 'assistant',
         text: reply.text ?? followupFallback(text, candidates),
@@ -222,7 +286,7 @@ export function useReferralSearch(options: UseReferralSearchOptions = {}) {
       });
       setSearch((prev) => ({ ...prev, summarizing: false }));
     },
-    [appendMessage, searchParams, candidates, feedbackApplied]
+    [appendMessage, searchParams, candidates, feedbackApplied, summarizer]
   );
 
   const runSearch = useCallback(
@@ -265,7 +329,12 @@ export function useReferralSearch(options: UseReferralSearchOptions = {}) {
             setSearch({ loading: false, summarizing: false, error: null });
             return;
           }
-          const summary = await fetchSearchSummary(params, res.candidates ?? [], !!res.feedback_applied);
+          const summary = await fetchSearchSummary(
+            params,
+            res.candidates ?? [],
+            !!res.feedback_applied,
+            summarizer
+          );
           appendMessage({
             role: 'assistant',
             text: summary.text ?? chatSummary(params, res.candidates ?? [], !!res.feedback_applied),
@@ -283,7 +352,7 @@ export function useReferralSearch(options: UseReferralSearchOptions = {}) {
         if (!opts.quiet) appendMessage({ role: 'assistant', text: `Search failed: ${message}` });
       }
     },
-    [appendMessage]
+    [appendMessage, summarizer]
   );
 
   const submitMessage = useCallback(
@@ -294,7 +363,7 @@ export function useReferralSearch(options: UseReferralSearchOptions = {}) {
 
       if (searchParams && candidates.length > 0) {
         setSearch((prev) => ({ ...prev, summarizing: true, error: null }));
-        const intent = await fetchMessageIntent(trimmed, searchParams, candidates);
+        const intent = await fetchMessageIntent(trimmed, searchParams, candidates, summarizer);
         if (intent === 'follow_up') {
           await answerFollowUp(trimmed);
           return;
@@ -346,7 +415,7 @@ export function useReferralSearch(options: UseReferralSearchOptions = {}) {
 
       await runSearch(params);
     },
-    [appendMessage, runSearch, searchParams, candidates, answerFollowUp]
+    [appendMessage, runSearch, searchParams, candidates, answerFollowUp, summarizer]
   );
 
   const rerunSearch = useCallback(async (): Promise<void> => {
@@ -522,6 +591,11 @@ export function useReferralSearch(options: UseReferralSearchOptions = {}) {
     userLocation,
     search,
     actionPending,
+    summarizer,
+    setSummarizer,
+    summarizerLabel,
+    genieEnabled,
+    llamaModel,
     submitMessage,
     searchFromSidebar,
     clearSearch,

@@ -66,9 +66,40 @@ export function ReferralChatPanel({ referral, exampleQueries }: ReferralChatPane
     <div className="flex h-full min-h-0 flex-col bg-white" data-testid="referral-chat-panel">
       <div className="shrink-0 border-b border-neutral-200 px-4 py-3">
         <AppBrand variant="compact" />
-        <p className="mt-2 text-xs text-neutral-500">
-          Evidence-aware ranking + <span className="text-indigo-600">Databricks Genie</span> summaries
-        </p>
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-xs text-neutral-500">
+            Evidence-aware ranking +{' '}
+            <span className="text-indigo-600">{referral.summarizerLabel}</span> summaries
+          </p>
+          <div className="inline-flex rounded-md border border-neutral-200 bg-neutral-50 p-0.5 text-[11px]">
+            {referral.genieEnabled ? (
+              <button
+                type="button"
+                onClick={() => referral.setSummarizer('genie')}
+                className={`rounded px-2 py-1 font-medium ${
+                  referral.summarizer === 'genie'
+                    ? 'bg-white text-indigo-700 shadow-sm'
+                    : 'text-neutral-600 hover:text-neutral-800'
+                }`}
+                data-testid="summarizer-genie"
+              >
+                Genie
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => referral.setSummarizer('llama')}
+              className={`rounded px-2 py-1 font-medium ${
+                referral.summarizer === 'llama'
+                  ? 'bg-white text-indigo-700 shadow-sm'
+                  : 'text-neutral-600 hover:text-neutral-800'
+              }`}
+              data-testid="summarizer-llama"
+            >
+              Llama
+            </button>
+          </div>
+        </div>
       </div>
 
       <div ref={scrollRef} className="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 py-4">
@@ -85,7 +116,7 @@ export function ReferralChatPanel({ referral, exampleQueries }: ReferralChatPane
         {referral.search.summarizing && (
           <div className="flex justify-start">
             <div className="max-w-[60%] animate-pulse rounded-2xl rounded-bl-sm border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm text-indigo-700">
-              Genie is thinking…
+              {referral.summarizerLabel} is thinking…
             </div>
           </div>
         )}
