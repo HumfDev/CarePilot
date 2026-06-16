@@ -19,7 +19,26 @@ interface UrgencyResult {
   department: string;
 }
 
-const URGENCY_FALLBACK: UrgencyResult = { urgency_score: 5, urgency_label: 'Routine', department: '' };
+// Condition-based urgency — used as fallback when LLM is unavailable.
+// Scores are based purely on medical condition type, not patient demographics.
+const CONDITION_URGENCY: Record<string, UrgencyResult> = {
+  emergency: { urgency_score: 10, urgency_label: 'Emergency',   department: 'Emergency Medicine' },
+  heart:     { urgency_score: 9,  urgency_label: 'Emergency',   department: 'Cardiology' },
+  surgery:   { urgency_score: 7,  urgency_label: 'Urgent',      department: 'Surgery' },
+  pregnancy: { urgency_score: 6,  urgency_label: 'Urgent',      department: 'Obstetrics & Gynecology' },
+  cancer:    { urgency_score: 6,  urgency_label: 'Semi-urgent', department: 'Oncology' },
+  child:     { urgency_score: 5,  urgency_label: 'Semi-urgent', department: 'Pediatrics' },
+  dialysis:  { urgency_score: 5,  urgency_label: 'Semi-urgent', department: 'Nephrology' },
+  kidney:    { urgency_score: 5,  urgency_label: 'Semi-urgent', department: 'Nephrology' },
+  diabetes:  { urgency_score: 4,  urgency_label: 'Routine',     department: 'Endocrinology' },
+  hypertension: { urgency_score: 4, urgency_label: 'Routine',   department: 'Internal Medicine' },
+  diagnostics: { urgency_score: 3, urgency_label: 'Routine',    department: 'Radiology' },
+  general:   { urgency_score: 3,  urgency_label: 'Routine',     department: 'General Medicine' },
+};
+
+function conditionFallback(careNeed: string): UrgencyResult {
+  return CONDITION_URGENCY[careNeed] ?? { urgency_score: 4, urgency_label: 'Routine', department: '' };
+}
 
 function extractUrgencyJSON(raw: string): { urgency_score: unknown; urgency_label: unknown; department: unknown } {
   // Strip markdown fences (```json ... ``` or ``` ... ```)
@@ -36,21 +55,23 @@ async function assessUrgency(message: string, careNeed: string): Promise<Urgency
     const host = process.env.DATABRICKS_HOST;
     const token = process.env.DATABRICKS_TOKEN;
     if (!host || !token) {
-      console.warn('[urgency] credentials missing, using fallback');
-      console.log('[urgency]', { query: message, ...URGENCY_FALLBACK, fallback: true });
-      return URGENCY_FALLBACK;
+      const fb = conditionFallback(careNeed);
+      console.warn('[urgency] credentials missing, using condition fallback');
+      console.log('[urgency]', { query: message, ...fb, fallback: true });
+      return fb;
     }
 
     const systemPrompt =
-      'You are a medical triage assistant. Based on the patient\'s described need, assess urgency 1-10 and identify the primary medical department/specialty.\n\n' +
+      'You are a medical triage nurse. Read the patient request and assign a clinical urgency score 1-10 using common medical sense.\n\n' +
       'Urgency scale:\n' +
-      '- 9-10: Life-threatening emergency (cardiac arrest, stroke, severe trauma, difficulty breathing)\n' +
-      '- 7-8: Urgent (acute pain, sudden vision loss, high fever, uncontrolled bleeding)\n' +
-      '- 5-6: Semi-urgent (needs care within days, worsening chronic condition)\n' +
-      '- 3-4: Routine with concern (check-up for a specific condition, stable chronic care)\n' +
-      '- 1-2: Preventive/routine (wellness check, prescription renewal)\n\n' +
-      'Respond ONLY with a JSON object, no other text:\n' +
-      '{"urgency_score":<integer 1-10>,"urgency_label":"<Emergency|Urgent|Semi-urgent|Routine>","department":"<e.g. Nephrology>","reasoning":"<one sentence>"}';
+      '- 9-10: Life-threatening (cardiac, stroke, severe trauma, breathing difficulty)\n' +
+      '- 7-8: Urgent (acute pain, sudden vision/hearing loss, high fever, active bleeding)\n' +
+      '- 5-6: Semi-urgent (cancer care, maternity, pediatric acute, kidney failure management)\n' +
+      '- 3-4: Routine (chronic disease management — diabetes, hypertension, dialysis maintenance)\n' +
+      '- 1-2: Preventive (wellness check-up, screening, prescription renewal)\n\n' +
+      'Also identify the primary medical department (e.g. "eye pain" → Ophthalmology, "heart problem" → Cardiology).\n\n' +
+      'Always respond with ONLY a JSON object:\n' +
+      '{"urgency_score":<integer 1-10>,"urgency_label":"<Emergency|Urgent|Semi-urgent|Routine>","department":"<department>","reasoning":"<one sentence>"}';
 
     const resp = await fetch(`${host}/serving-endpoints/databricks-llama-4-maverick/invocations`, {
       method: 'POST',
@@ -58,9 +79,9 @@ async function assessUrgency(message: string, careNeed: string): Promise<Urgency
       body: JSON.stringify({
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Patient input: "${message}"\nInferred condition: "${careNeed}"` },
+          { role: 'user', content: message },
         ],
-        max_tokens: 200,
+        max_tokens: 150,
         temperature: 0,
       }),
       signal: AbortSignal.timeout(10_000),
@@ -86,9 +107,10 @@ async function assessUrgency(message: string, careNeed: string): Promise<Urgency
     console.log('[urgency]', { query: message, ...result, fallback: false });
     return result;
   } catch (err) {
-    console.warn('[urgency] assessment failed, using fallback:', err instanceof Error ? err.message : String(err));
-    console.log('[urgency]', { query: message, ...URGENCY_FALLBACK, fallback: true });
-    return URGENCY_FALLBACK;
+    const fb = conditionFallback(careNeed);
+    console.warn('[urgency] assessment failed, using condition fallback:', err instanceof Error ? err.message : String(err));
+    console.log('[urgency]', { query: message, ...fb, fallback: true });
+    return fb;
   }
 }
 
