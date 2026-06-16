@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { IndiaMapPanel } from '../components/IndiaMapPanel';
-import { ReferralChatPanel } from '../components/ReferralChatPanel';
+import { RightChatPanel } from '../components/RightChatPanel';
 import { ReferralCandidateList } from '../components/ReferralCandidateList';
 import { ReferralCandidateCard } from '../components/ReferralCandidateCard';
 import { useReferralSearch } from '../hooks/useReferralSearch';
@@ -20,11 +20,22 @@ export function ChatPage() {
   );
 
   useEffect(() => {
+    if (referral.userLocation && referral.candidates.length > 0) {
+      setPlannerLocation({
+        lat: referral.userLocation.lat,
+        lon: referral.userLocation.lon,
+      });
+    }
+  }, [referral.userLocation, referral.candidates.length]);
+
+  useEffect(() => {
     mockRoute.clear();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [referral.scenarioId]);
 
-  const handleShowRoute = useCallback(
+  const routeFacilityId = mockRoute.activeFacilityId ?? mockRoute.route?.facility_id ?? null;
+
+  const handleShowReferralRoute = useCallback(
     (candidate: ReferralCandidate) => {
       if (!userLocation) return;
       if (candidate.latitude == null || candidate.longitude == null) return;
@@ -38,8 +49,6 @@ export function ChatPage() {
     },
     [mockRoute, referral, userLocation],
   );
-
-  const routeFacilityId = mockRoute.activeFacilityId ?? mockRoute.route?.facility_id ?? null;
 
   return (
     <div className="flex h-screen flex-col bg-white text-neutral-900">
@@ -60,6 +69,8 @@ export function ChatPage() {
                   mockRouteLoading={mockRoute.loading}
                   mockRouteError={mockRoute.error}
                   onClearMockRoute={mockRoute.clear}
+                  onSelectCandidate={referral.selectCandidate}
+                  searchRadiusKm={referral.searchParams?.max_distance_km ?? null}
                 />
               </Panel>
               {referral.candidates.length > 0 ? (
@@ -76,7 +87,7 @@ export function ChatPage() {
                         routeFacilityId={routeFacilityId}
                         route={mockRoute.route}
                         routeLoading={mockRoute.loading}
-                        onShowRoute={handleShowRoute}
+                        onShowRoute={handleShowReferralRoute}
                         onClearRoute={mockRoute.clear}
                       />
                     </div>
@@ -87,7 +98,7 @@ export function ChatPage() {
           </Panel>
           <PanelResizeHandle className="w-1 bg-neutral-200 transition-colors hover:bg-neutral-300" />
           <Panel defaultSize={28} minSize={22} className="min-h-0">
-            <ReferralChatPanel referral={referral} />
+            <RightChatPanel referral={referral} />
           </Panel>
         </PanelGroup>
       </main>

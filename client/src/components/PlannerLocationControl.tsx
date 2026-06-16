@@ -86,6 +86,9 @@ export function PlannerLocationControl({
         <div className="mb-2 flex items-start justify-between gap-2">
           <div>
             <div className="text-[10px] font-semibold uppercase tracking-wide text-blue-600">My location</div>
+            <p className="mt-0.5 text-[10px] leading-snug text-neutral-500">
+              Demo only — used as the route origin. Not your device GPS.
+            </p>
           </div>
           <button
             type="button"

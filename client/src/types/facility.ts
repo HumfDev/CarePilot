@@ -20,6 +20,17 @@ export interface FacilityNode {
   isHospital: boolean | null;
   nfhsMatched: boolean | null;
   coordSource: string | null;
+  // Optional fields for map search scoring (UC / SQL API)
+  trustScoreV2?: number | null;
+  sourceCredibilityScore?: number | null;
+  description?: string | null;
+  specialties?: string | null;
+  capability?: string | null;
+  procedure?: string | null;
+  equipment?: string | null;
+  facilityTypeId?: string | null;
+  numberDoctors?: string | null;
+  capacity?: string | null;
 }
 
 export interface FacilitiesMeta {

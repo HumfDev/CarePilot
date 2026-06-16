@@ -24,6 +24,9 @@ interface ReferralCandidateListProps {
   routeLoading: boolean;
   onShowRoute: (candidate: ReferralCandidate) => void;
   onClearRoute: () => void;
+  embedded?: boolean;
+  hideHeader?: boolean;
+  departureTime?: string;
 }
 
 function uncertaintyTone(level: string | null): { dot: string; label: string } {
@@ -50,8 +53,12 @@ export function ReferralCandidateList({
   routeLoading,
   onShowRoute,
   onClearRoute,
+  embedded = false,
+  hideHeader = false,
+  departureTime,
 }: ReferralCandidateListProps) {
   if (!candidates.length) {
+    if (embedded) return null;
     return (
       <div className="flex flex-col gap-1 px-4 py-3 text-xs text-neutral-500">
         <span className="font-semibold uppercase tracking-wide text-neutral-400">Ranked candidates</span>
@@ -63,17 +70,32 @@ export function ReferralCandidateList({
   const canRoute = userLocation != null;
 
   return (
-    <div className="flex h-full min-h-0 flex-col" data-testid="referral-candidate-list">
-      <div className="flex shrink-0 items-center justify-between border-b border-neutral-200 px-4 py-2">
-        <span className="text-xs font-semibold uppercase tracking-wide text-neutral-700">
-          Ranked candidates · {candidates.length}
-        </span>
-        {feedbackApplied ? (
+    <div className={`flex min-h-0 flex-col ${embedded ? 'h-full' : 'h-full'}`} data-testid="referral-candidate-list">
+      {!hideHeader ? (
+        <div
+          className={`flex shrink-0 items-center justify-between px-3 py-2 ${embedded ? '' : 'border-b border-neutral-200 px-4'}`}
+        >
+          <span className="text-xs font-semibold uppercase tracking-wide text-neutral-700">
+            {embedded ? 'Ranked results' : 'Ranked candidates'} · {candidates.length}
+          </span>
+          {feedbackApplied ? (
+            <span className="rounded-md bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-medium text-blue-700">
+              Feedback re-rank active
+            </span>
+          ) : null}
+        </div>
+      ) : feedbackApplied ? (
+        <div className="flex shrink-0 justify-end px-3 py-1.5">
           <span className="rounded-md bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-medium text-blue-700">
             Feedback re-rank active
           </span>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
+      {departureTime && embedded ? (
+        <p className="px-3 pb-1 text-[10px] text-neutral-500">
+          Route ETA uses departure {departureTime} · set in planner above
+        </p>
+      ) : null}
       <ul className="min-h-0 flex-1 divide-y divide-neutral-200 overflow-y-auto">
         {candidates.map((candidate) => {
           const isSelected = candidate.facility_id === selectedCandidateId;
@@ -117,7 +139,7 @@ export function ReferralCandidateList({
                     </div>
                     <span className="shrink-0 text-xs font-semibold text-neutral-900">{score.toFixed(1)}</span>
                   </div>
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-neutral-400">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-neutral-600">
                     <span>{distance.toFixed(1)} km</span>
                     <span className={tone.label}>
                       <span className={`mr-1 inline-block h-1.5 w-1.5 rounded-full ${tone.dot}`} />
@@ -132,7 +154,7 @@ export function ReferralCandidateList({
                     ) : null}
                     {hasMissing ? <span className="text-neutral-500">missing fields</span> : null}
                   </div>
-                  <p className="line-clamp-2 text-[11px] leading-snug text-neutral-400">
+                  <p className="line-clamp-2 text-[11px] leading-snug text-neutral-500">
                     {compactReason(candidate.recommendation_reason)}
                   </p>
                 </button>

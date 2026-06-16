@@ -337,6 +337,80 @@ export function useReferralSearch(options: UseReferralSearchOptions = {}) {
     await runSearch(searchParams, { quiet: true });
   }, [runSearch, searchParams]);
 
+  /** Same pipeline as chat — parse + Python evidence search. */
+  const searchFromSidebar = useCallback(
+    async (input: {
+      city: string;
+      careNeed: string;
+      plannerLocation?: { lat: number; lon: number } | null;
+    }): Promise<void> => {
+      const city = input.city.trim();
+      const careNeed = input.careNeed.trim();
+      if (!city) {
+        setSearch((prev) => ({ ...prev, error: 'Enter a city (e.g. Jaipur).' }));
+        return;
+      }
+
+      const message = careNeed ? `${careNeed} near ${city}` : `healthcare near ${city}`;
+      appendMessage({ role: 'user', text: message });
+
+      let parsed: ReferralParseResponse;
+      try {
+        parsed = await postJSON<ReferralParseResponse>('/api/referral/parse', { message });
+      } catch (err) {
+        const errMsg = err instanceof Error ? err.message : 'Could not parse search.';
+        setSearch({ loading: false, summarizing: false, error: errMsg });
+        appendMessage({ role: 'assistant', text: `Search failed: ${errMsg}` });
+        return;
+      }
+
+      if (!parsed.ok) {
+        const fallback =
+          parsed.message ?? 'Could not parse city and care need. Try "dialysis near Jaipur".';
+        setSearch({ loading: false, summarizing: false, error: null });
+        appendMessage({ role: 'assistant', text: fallback });
+        return;
+      }
+
+      const params: ReferralSearchParams = {
+        care_need: parsed.care_need,
+        care_type: parsed.care_type,
+        location_text: parsed.location_text,
+        user_lat: parsed.user_lat,
+        user_lon: parsed.user_lon,
+        ranking_priority: parsed.ranking_priority,
+        max_distance_km: parsed.max_distance_km,
+        top_n: parsed.top_n,
+      };
+
+      if (input.plannerLocation) {
+        params.user_lat = input.plannerLocation.lat;
+        params.user_lon = input.plannerLocation.lon;
+      }
+
+      if (searchParams && candidates.length > 0 && searchParamsMatch(params, searchParams)) {
+        appendMessage({
+          role: 'assistant',
+          text: alreadyShownSummaryMessage(searchParams, candidates.length),
+          meta: { kind: 'duplicate_search' },
+        });
+        return;
+      }
+
+      await runSearch(params);
+    },
+    [appendMessage, runSearch, searchParams, candidates],
+  );
+
+  const clearSearch = useCallback(() => {
+    setCandidates([]);
+    setSearchParams(null);
+    setScenarioId(null);
+    setFeedbackApplied(false);
+    setSelectedCandidateId(null);
+    setSearch({ loading: false, summarizing: false, error: null });
+  }, []);
+
   const persistAndRerun = useCallback(
     async (label: string, path: string, body: unknown): Promise<void> => {
       setActionPending(label);
@@ -432,6 +506,8 @@ export function useReferralSearch(options: UseReferralSearchOptions = {}) {
     search,
     actionPending,
     submitMessage,
+    searchFromSidebar,
+    clearSearch,
     rerunSearch,
     selectCandidate: setSelectedCandidateId,
     clearSelection: () => setSelectedCandidateId(null),

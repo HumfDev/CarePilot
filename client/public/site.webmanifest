@@ -1,6 +1,6 @@
 {
-  "name": "rag-chat-appkit-reference",
-  "short_name": "rag-chat-appkit-reference",
+  "name": "CarePilot Referral Copilot",
+  "short_name": "CarePilot",
   "icons": [
     {
       "src": "/favicon-192x192.png",
@@ -14,6 +14,6 @@
     }
   ],
   "theme_color": "#ffffff",
-  "background_color": "#ffffff",
+  "background_color": "#f8fafc",
   "display": "standalone"
 }
