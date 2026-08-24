@@ -1,3 +1,4 @@
+<!-- dc:last-synced: 2026-08-24 -->
 # CarePilot Referral Copilot
 
 Evidence-aware healthcare facility referral copilot for India — map, ranked candidates, OSRM routes, and Databricks-powered summaries.
