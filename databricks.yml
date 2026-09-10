@@ -3,7 +3,7 @@ bundle:
 
 sync:
   exclude:
-    - dh_EDA.ipynb.ipynb
+    - notebooks/dh_eda.ipynb
     - node_modules/**
     - .git/**
     - .env

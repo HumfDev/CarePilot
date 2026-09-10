@@ -31,7 +31,7 @@ const UC_HEALTHCARE_TABLES = [
     table_name: 'facility_features_v4',
     unity_catalog_table: 'workspace.default.facility_feature_table_v4',
     description:
-      'v4 cleaned + scored facilities — trust_score_v2 + 5 component scores + NFHS join. Built by facility_feature_pipeline_v4. See docs/v4-scoring-integration.md for the Lakebase sync setup; the map route LEFT-JOINs this table so the app degrades gracefully if it is not yet synced.',
+      'v4 cleaned + scored facilities - trust_score_v2 + 5 component scores + NFHS join. Built by facility_feature_pipeline_v4. See docs/v4-scoring-integration.md for the Lakebase sync setup; the map route LEFT-JOINs this table so the app degrades gracefully if it is not yet synced.',
   },
 ] as const;
 
@@ -43,7 +43,7 @@ export async function setupHealthcareLakebase(appkit: AppKitWithLakebase) {
       table_name TEXT PRIMARY KEY,
       unity_catalog_table TEXT NOT NULL,
       description TEXT,
-      notebook_source TEXT DEFAULT 'dh_EDA.ipynb.ipynb',
+      notebook_source TEXT DEFAULT 'notebooks/dh_eda.ipynb',
       updated_at TIMESTAMPTZ DEFAULT NOW()
     )
   `);

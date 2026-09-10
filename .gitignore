@@ -8,3 +8,5 @@ build/
 .smoke-test/
 test-results/
 playwright-report/
+__pycache__/
+*.pyc

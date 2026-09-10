@@ -1,22 +1,28 @@
 <!-- dc:last-synced: 2026-08-24 -->
 # CarePilot Referral Copilot
 
-Evidence-aware healthcare facility referral copilot for India — map, ranked candidates, OSRM routes, and Databricks-powered summaries.
+Evidence-aware healthcare facility referral copilot for India - map, ranked candidates, OSRM routes, and Databricks-powered summaries.
 
 **Live app:** https://carepilot-2975424914277074.aws.databricksapps.com
 
 Built on [Databricks AppKit](https://databricks.github.io/appkit/) with **Lakebase Postgres**, **Unity Catalog synced tables**, **Genie**, and **Model Serving** (Llama 4 Maverick).
 
+## Demo
+
+![CarePilot map and ranked candidates](images/carepilot.png)
+
+![CarePilot referral chat](images/carepilotchat.jpg)
+
 ## What it does
 
-- **Referral search** — natural language (`dialysis near Jaipur`) → evidence-ranked facility list + map markers
-- **Lakebase SQL scoring** — `facilities` ⨝ `facility_features_v4` (UC sync) with trust, NFHS local-need, distance, and evidence signals
-- **Planner workspace** — shortlist, notes, review decisions, overrides persisted in Lakebase `referral` schema
-- **Routes** — OSRM driving ETA overlays
-- **Genie tab** (production) — ad-hoc queries on Virtue Foundation + NFHS datasets
-- **Llama summaries** — search recap and candidate card explanations via Model Serving
+- **Referral search** - natural language (`dialysis near Jaipur`) → evidence-ranked facility list + map markers
+- **Lakebase SQL scoring** - `facilities` ⨝ `facility_features_v4` (UC sync) with trust, NFHS local-need, distance, and evidence signals
+- **Planner workspace** - shortlist, notes, review decisions, overrides persisted in Lakebase `referral` schema
+- **Routes** - OSRM driving ETA overlays
+- **Genie tab** (production) - ad-hoc queries on Virtue Foundation + NFHS datasets
+- **Llama summaries** - search recap and candidate card explanations via Model Serving
 
-> Planner-facing tool — not medical advice. Verify before referral.
+> Planner-facing tool - not medical advice. Verify before referral.
 
 ## Data flow
 
@@ -69,7 +75,7 @@ npm run deploy
 
 `npm run deploy` runs bundle sync → `databricks bundle deploy` → `databricks bundle run app`.
 
-**Do not set `CAREPILOT_LOCAL_DEMO` in production** — the app loads Lakebase + Genie automatically.
+**Do not set `CAREPILOT_LOCAL_DEMO` in production** - the app loads Lakebase + Genie automatically.
 
 ### Runtime env (app.yaml)
 
@@ -106,10 +112,10 @@ Optional: `CAREPILOT_ENABLE_GENIE=1` to show the Genie tab locally (requires Gen
 ## Demo script (judges / stakeholders)
 
 1. Open the app → **Plan your trip** sidebar pre-filled: `Jaipur` + `dialysis`
-2. Click **Search** — ranked candidates appear on map and list
-3. Click **Hide** — form collapses; **Ranked results · N** moves up
+2. Click **Search** - ranked candidates appear on map and list
+3. Click **Hide** - form collapses; **Ranked results · N** moves up
 4. Select a facility → open evidence card → **Route** for OSRM ETA
-5. Chat: ask *"why is #1 ranked highest?"* — Llama follow-up
+5. Chat: ask *"why is #1 ranked highest?"* - Llama follow-up
 6. Switch to **Genie data** tab → ask about NFHS indicators or facility counts
 
 ## Project layout
